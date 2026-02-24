@@ -34,7 +34,7 @@ class DebugValidateSignature
             'request_method' => $request->method(),
             'request_scheme' => $request->getScheme(),
             'request_host' => $request->getHost(),
-            'request_port' => $request->port(),
+            'request_port' => $request->getPort(),
             'request_is_secure' => $request->isSecure(),
             'full_url' => $fullUrl,
             'url_without_signature' => $urlWithoutSignature,
