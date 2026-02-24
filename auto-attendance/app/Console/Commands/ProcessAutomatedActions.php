@@ -11,18 +11,25 @@ class ProcessAutomatedActions extends Command
      *
      * @var string
      */
-    protected $signature = 'app:process-automated-actions';
+    protected $signature = 'app:process-automated-actions {action_id?}';
     protected $description = 'Process automated HR platform actions for the current minute';
 
     public function handle()
     {
+        if ($actionId = $this->argument('action_id')) {
+            $setting = \App\Models\UserActionSetting::with(['user.credentials', 'platformAction.platform'])->find($actionId);
+            if ($setting && $setting->is_active) {
+                $this->processSetting($setting);
+            }
+            return;
+        }
+
         $now = \Carbon\Carbon::now();
         $currentTime = $now->format('H:i');
 
         $this->info("Processing actions for time: {$currentTime}");
 
         // Find active settings matching the current minute (ignoring seconds)
-        // using LIKE format to match starting H:i part of the H:i:s
         $settings = \App\Models\UserActionSetting::with(['user.credentials', 'platformAction.platform'])
             ->where('is_active', true)
             ->where('target_time', 'LIKE', $currentTime . '%')
@@ -34,7 +41,9 @@ class ProcessAutomatedActions extends Command
         }
 
         foreach ($settings as $setting) {
-            $this->processSetting($setting);
+            $command = 'php ' . base_path('artisan') . ' app:process-automated-actions ' . $setting->id . ' > /dev/null 2>&1 &';
+            exec($command);
+            $this->info("Spawned background process for setting ID: {$setting->id}");
         }
     }
 
