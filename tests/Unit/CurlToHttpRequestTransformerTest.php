@@ -124,6 +124,22 @@ class CurlToHttpRequestTransformerTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
+    public function it_handles_malformed_curl_with_missing_opening_quote()
+    {
+        // This matches the actual data stored in the database - missing opening quote for --data-raw
+        $curl = "curl 'https://sso.pihr.xyz/login/userlogin' -H 'content-type: multipart/form-data; boundary=----WebKitFormBoundaryXJKOXKDDQI4IoKIv' --data-raw ------WebKitFormBoundaryXJKOXKDDQI4IoKIv\\r\\nContent-Disposition: form-data; name=\"UserName\"\\r\\n\\r\\ntestuser\\r\\n------WebKitFormBoundaryXJKOXKDDQI4IoKIv--\\r\\n'";
+
+        $this->transformer->parse($curl);
+
+        $this->assertEquals('https://sso.pihr.xyz/login/userlogin', $this->transformer->getUrl());
+        $this->assertEquals('POST', $this->transformer->getMethod());
+        $this->assertStringContainsString('UserName', $this->transformer->getRawBody());
+        $this->assertStringContainsString('testuser', $this->transformer->getRawBody());
+        // Should contain actual CRLF after conversion
+        $this->assertStringContainsString("\r\n", $this->transformer->getRawBody());
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
     public function it_makes_actual_api_request_without_405_error()
     {
         $curl = "curl 'https://api.pihr.xyz/api/v2/my-attendances/in-time?' \

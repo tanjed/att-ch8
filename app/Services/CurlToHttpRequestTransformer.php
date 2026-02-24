@@ -99,23 +99,29 @@ class CurlToHttpRequestTransformer
         // Parse data - try different flags with more flexible patterns
         // Handle both quoted and unquoted data values
         $dataPatterns = [
+            // Quoted data patterns
             '/--data-raw\s+\'([^\']+)\'/s',
             '/--data-raw\s+"([^"]+)"/s',
-            '/--data-raw\s+([^\s\'"]\S*)/s',  // unquoted data
             '/--data\s+\'([^\']+)\'/s',
             '/--data\s+"([^"]+)"/s',
-            '/--data\s+([^\s\'"]\S*)/s',
             '/-d\s+\'([^\']+)\'/s',
             '/-d\s+"([^"]+)"/s',
-            '/-d\s+([^\s\'"]\S*)/s',
             '/--data-binary\s+\'([^\']+)\'/s',
             '/--data-binary\s+"([^"]+)"/s',
-            '/--data-binary\s+([^\s\'"]\S*)/s',
+            // Unquoted data - capture until end of string (for malformed curl commands)
+            '/--data-raw\s+(.+)$/s',
+            '/--data\s+(.+)$/s',
+            '/-d\s+(.+)$/s',
+            '/--data-binary\s+(.+)$/s',
         ];
 
         foreach ($dataPatterns as $pattern) {
             if (preg_match($pattern, $curlCommand, $matches)) {
-                $this->rawBody = $matches[1];
+                $this->rawBody = trim($matches[1]);
+                // If the captured data ends with a quote, remove it (handles malformed quotes)
+                if (preg_match('/^(.+)[\'"]$/s', $this->rawBody, $m)) {
+                    $this->rawBody = $m[1];
+                }
                 break;
             }
         }
@@ -153,8 +159,8 @@ class CurlToHttpRequestTransformer
         unset($headersToSend['Content-Type'], $headersToSend['content-type']);
 
         $http = Http::withHeaders($headersToSend)
-            ->withoutVerifying() // Match curl's default behavior for development
-            ->maxRedirects(10);   // Follow redirects like curl
+            ->withoutVerifying() // Match curl's -k behavior
+            ->withOptions(['allow_redirects' => false]); // Don't follow redirects to avoid loops
 
         // If we have a raw body, send it with the appropriate content type
         if (!empty($this->rawBody)) {
