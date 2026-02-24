@@ -19,9 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Force HTTPS if APP_URL uses https (works for queued jobs too)
-        if (str_starts_with(config('app.url'), 'https://')) {
+        if (app()->environment('production')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
+        } else {
+            \Illuminate\Support\Facades\URL::forceScheme('http');
         }
     }
 }
