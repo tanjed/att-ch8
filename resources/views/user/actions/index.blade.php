@@ -32,16 +32,16 @@
                                         class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                         Platform Action</th>
                                     <th
-                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-left">
                                         Target Time</th>
                                     <th
-                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-left">
                                         Next Execution Time</th>
                                     <th
-                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-left">
                                         Status</th>
                                     <th
-                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-left">
                                         Actions</th>
                                 </tr>
                             </thead>
@@ -53,14 +53,14 @@
                                             {{ $setting->platformAction->platform->name }} -
                                             {{ $setting->platformAction->name }}
                                         </td>
-                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600 align-top">
                                             {{ \Carbon\Carbon::parse($setting->target_time)->format('h:i A') }}
                                             @if($setting->buffer_minutes > 0)
                                                 <span class="text-xs text-gray-400 block">&plusmn;{{ $setting->buffer_minutes }}
                                                     mins</span>
                                             @endif
                                         </td>
-                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600 align-top">
                                             {{ \Carbon\Carbon::parse($setting->next_execution_time)->format('h:i A') }}
                                         </td>
                                         <td class="p-4 border-b border-gray-50 dark:border-gray-600">
