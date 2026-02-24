@@ -35,11 +35,14 @@ class ActionSettingController extends Controller
             'platform_action_id' => 'required|exists:platform_actions,id',
             'target_time' => 'required|date_format:H:i',
             'buffer_minutes' => 'nullable|integer|min:0',
+            'weekly_off_days' => 'nullable|array',
+            'weekly_off_days.*' => 'string|in:Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
         ]);
 
         $carbonTime = \Carbon\Carbon::parse($validated['target_time']);
         $validated['target_time'] = $carbonTime->format('H:i:s'); // Ensure it saves as valid time object
         $validated['is_active'] = $request->has('is_active');
+        $validated['weekly_off_days'] = $request->input('weekly_off_days', null);
         $buffer = $validated['buffer_minutes'] ?? 0;
 
         // Calculate the initial next_execution_time based on buffer
@@ -81,11 +84,14 @@ class ActionSettingController extends Controller
             'platform_action_id' => 'required|exists:platform_actions,id',
             'target_time' => 'required|date_format:H:i',
             'buffer_minutes' => 'nullable|integer|min:0',
+            'weekly_off_days' => 'nullable|array',
+            'weekly_off_days.*' => 'string|in:Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday',
         ]);
 
         $carbonTime = \Carbon\Carbon::parse($validated['target_time']);
         $validated['target_time'] = $carbonTime->format('H:i:s'); // Ensure it saves as valid time object
         $validated['is_active'] = $request->has('is_active');
+        $validated['weekly_off_days'] = $request->input('weekly_off_days', null); // Clears if empty/null
         $buffer = $validated['buffer_minutes'] ?? 0;
 
         // Calculate a new next_execution_time based on the updated settings

@@ -179,9 +179,7 @@ class ProcessAutomatedActionJob implements ShouldQueue
             $transformer = new CurlToHttpRequestTransformer();
             $response = $transformer->execute($curl);
 
-            if ($response->successful()) {
-                Log::info('Successfully hit related auth URL', ['status' => $response->status()]);
-            } else {
+            if (!$response->successful()) {
                 Log::warning('Related auth URL failed', [
                     'status' => $response->status(),
                     'body' => $response->body()
@@ -262,6 +260,5 @@ class ProcessAutomatedActionJob implements ShouldQueue
         $setting->update([
             'next_execution_time' => $newTime
         ]);
-        Log::info("Calculated new execution time for setting {$setting->id}: {$newTime}");
     }
 }

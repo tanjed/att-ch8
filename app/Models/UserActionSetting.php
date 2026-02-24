@@ -15,6 +15,11 @@ class UserActionSetting extends Model
         'is_active',
         'buffer_minutes',
         'next_execution_time',
+        'weekly_off_days',
+    ];
+
+    protected $casts = [
+        'weekly_off_days' => 'array',
     ];
 
     public function user()

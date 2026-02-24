@@ -36,8 +36,6 @@ class ProcessAutomatedActions extends Command
         $now = Carbon::now();
         $currentTime = $now->format('H:i');
 
-        $this->info("Checking for actions at or before: {$currentTime}");
-
         // Find active settings matching the current time or earlier 
         // to ensure no actions get missed if cron drops for a few minutes
         $settings = UserActionSetting::where('is_active', true)
@@ -45,13 +43,24 @@ class ProcessAutomatedActions extends Command
             ->get();
 
         if ($settings->isEmpty()) {
-            $this->info("No actions scheduled for this time or earlier.");
             return;
         }
 
         $dispatchedCount = 0;
 
         foreach ($settings as $setting) {
+            // Check for weekly off days
+            $currentDayName = $now->format('l'); // e.g., "Sunday", "Monday"
+            if (!empty($setting->weekly_off_days) && in_array($currentDayName, $setting->weekly_off_days)) {
+                $cacheKey = "action_executed_{$setting->id}_{$now->format('Y-m-d')}";
+                // Only skip if we haven't already marked it today (to save repeated info logs)
+                if (!Cache::has($cacheKey)) {
+                    Cache::put($cacheKey, 'skipped_off_day', $now->copy()->endOfDay());
+                    $this->info("Skipped background job for setting ID: {$setting->id} (Off Day: {$currentDayName})");
+                }
+                continue;
+            }
+
             // Atomic cache lock to ensure the same action doesn't get hit twice 
             // per day even if target_time <= currentTime continues to match
             $cacheKey = "action_executed_{$setting->id}_{$now->format('Y-m-d')}";
@@ -71,21 +80,15 @@ class ProcessAutomatedActions extends Command
                     Cache::put($cacheKey, 'processing', $now->copy()->addMinutes(15));
 
                     ProcessAutomatedActionJob::dispatch($setting->id);
-                    $this->info("Queued background job for setting ID: {$setting->id}");
                     $dispatchedCount++;
                 } else {
-                    $this->info("Skipped background job for setting ID: {$setting->id} (Found in DB Fallback)");
                     // Repair the cache since it was missing but found in DB
                     Cache::put($cacheKey, 'completed', $now->copy()->endOfDay());
                 }
-            } else {
-                $this->info("Skipped background job for setting ID: {$setting->id} (Found in Cache)");
             }
         }
 
-        if ($dispatchedCount === 0) {
-            $this->info("All matching actions have already been executed today.");
-        } else {
+        if ($dispatchedCount > 0) {
             $this->info("Successfully dispatched {$dispatchedCount} actions.");
         }
     }

@@ -76,6 +76,28 @@
                             </div>
                         @endif
 
+                        <!-- Weekly Off Days -->
+                        <div class="mt-4">
+                            <x-input-label :value="__('Weekly Off Days (Optional)')" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                Select any days of the week you do <strong>not</strong> want this action to run.
+                            </p>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                                @php
+                                    $savedOffDays = old('weekly_off_days', $action->weekly_off_days ?? []);
+                                @endphp
+                                @foreach(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as $day)
+                                    <label class="inline-flex items-center">
+                                        <input type="checkbox" name="weekly_off_days[]" value="{{ $day }}"
+                                            class="rounded dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-indigo-600 shadow-sm focus:ring-indigo-500"
+                                            {{ in_array($day, $savedOffDays) ? 'checked' : '' }}>
+                                        <span class="ms-2 text-sm text-gray-600 dark:text-gray-400">{{ $day }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <x-input-error :messages="$errors->get('weekly_off_days')" class="mt-2" />
+                        </div>
+
                         <!-- Active Toggle -->
                         <div class="mt-4">
                             <label for="is_active" class="inline-flex items-center">

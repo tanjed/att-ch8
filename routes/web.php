@@ -34,7 +34,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', function () {
-        return view('admin.dashboard');
+        $allActions = \App\Models\UserActionSetting::with(['user', 'platformAction.platform'])
+            ->orderBy('next_execution_time', 'asc')
+            ->get();
+        return view('admin.dashboard', compact('allActions'));
     })->name('dashboard');
 
     Route::resource('platforms', \App\Http\Controllers\Admin\PlatformController::class);
