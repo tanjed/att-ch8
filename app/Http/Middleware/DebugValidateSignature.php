@@ -20,6 +20,12 @@ class DebugValidateSignature
      */
     public function handle(Request $request, Closure $next)
     {
+        // WORKAROUND: Force HTTPS for signature validation in production
+        // since the proxy is not correctly forwarding X-Forwarded-Proto
+        if (app()->environment('production')) {
+            $request->headers->set('X-Forwarded-Proto', 'https');
+        }
+
         $fullUrl = $request->fullUrl();
         $urlWithoutSignature = $this->getUrlWithoutSignature($fullUrl);
 
