@@ -106,6 +106,37 @@
                 {{ $slot }}
             </div>
         </main>
+
+        <!-- Donation Banner (Consumer Only) -->
+        @if(Auth::check() && Auth::user()->role === 'CONSUMER')
+            <div x-data="{ showDonationBanner: sessionStorage.getItem('hideDonationBanner') !== 'true' }"
+                x-show="showDonationBanner"
+                class="fixed bottom-0 left-0 right-0 z-50 pointer-events-none lg:pl-72 flex justify-center pb-4 px-4 sm:px-6 lg:px-8">
+                <div
+                    class="pointer-events-auto flex flex-col sm:flex-row items-center justify-between gap-y-3 sm:gap-x-6 bg-indigo-600 px-6 py-4 sm:rounded-xl shadow-lg w-full max-w-2xl relative">
+                    <div class="flex-1 text-center sm:text-left flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                        <p class="text-base font-bold text-white whitespace-nowrap">
+                            Buy me a halim 🍲
+                        </p>
+                        <div class="hidden sm:block w-px h-6 bg-indigo-400"></div>
+                        <p class="text-sm text-indigo-100 flex items-center justify-center sm:justify-start gap-2">
+                            <span>Send bKash:</span>
+                            <span
+                                class="font-bold text-yellow-300 text-base tracking-wider bg-indigo-700/50 px-2 py-0.5 rounded border border-indigo-400/30">01629535307</span>
+                        </p>
+                    </div>
+                    <button @click="showDonationBanner = false; sessionStorage.setItem('hideDonationBanner', 'true')"
+                        type="button"
+                        class="absolute top-2 right-2 sm:static sm:top-auto sm:right-auto p-1.5 hover:bg-indigo-500 rounded-md transition-colors text-indigo-200 hover:text-white flex-shrink-0">
+                        <span class="sr-only">Dismiss</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path
+                                d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        @endif
     </div>
 </body>
 

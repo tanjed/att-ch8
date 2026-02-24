@@ -25,7 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::prefix('user')->name('user.')->group(function () {
+    Route::prefix('user')->name('user.')->middleware('verified')->group(function () {
         Route::resource('credentials', \App\Http\Controllers\User\CredentialController::class);
         Route::resource('actions', \App\Http\Controllers\User\ActionSettingController::class);
     });

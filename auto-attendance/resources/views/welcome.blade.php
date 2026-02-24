@@ -4,193 +4,158 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <title>{{ config('app.name', 'Att-Ch8') }}</title>
-
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
-
+    <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800&display=swap" rel="stylesheet" />
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+    </style>
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body
-    class="antialiased bg-gray-50 text-gray-900 font-sans selection:bg-indigo-500 selection:text-white dark:bg-gray-900 dark:text-gray-100 flex flex-col min-h-screen">
+<body class="antialiased bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white dark:bg-slate-950 dark:text-slate-100 flex flex-col min-h-screen relative overflow-x-hidden">
+
+    <!-- Background Aurora Glows -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 dark:bg-indigo-600/30 blur-[120px] mix-blend-multiply dark:mix-blend-lighten"></div>
+        <div class="absolute top-[20%] -right-[10%] w-[40%] h-[50%] rounded-full bg-fuchsia-600/20 dark:bg-fuchsia-600/30 blur-[120px] mix-blend-multiply dark:mix-blend-lighten"></div>
+        <div class="absolute -bottom-[20%] left-[20%] w-[60%] h-[40%] rounded-full bg-blue-600/20 dark:bg-blue-600/30 blur-[120px] mix-blend-multiply dark:mix-blend-lighten"></div>
+    </div>
 
     <!-- Navigation -->
-    <header class="absolute top-0 w-full z-50">
-        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" aria-label="Top">
-            <div class="w-full py-6 flex items-center justify-between border-b border-indigo-500 lg:border-none">
-                <div class="flex items-center">
-                    <a href="#">
-                        <span class="sr-only">Att-Ch8</span>
-                        <div class="flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-600">
-                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                    </a>
-                    <span
-                        class="ml-3 text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400">Att-Ch8</span>
+    <header class="absolute top-0 w-full z-50 py-6">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between" aria-label="Top">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30">
+                    <svg class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                 </div>
-                <div class="ml-10 space-x-4">
-                    @if (Route::has('login'))
-                        @auth
-                            <a href="{{ url('/dashboard') }}"
-                                class="inline-block bg-indigo-500 py-2 px-4 border border-transparent rounded-md text-base font-medium text-white hover:bg-opacity-75">Dashboard</a>
-                        @else
-                            <a href="{{ route('login') }}"
-                                class="inline-block bg-white dark:bg-gray-800 py-2 px-4 border border-transparent rounded-md text-base font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-700">Log
-                                in</a>
-
-                            @if (Route::has('register'))
-                                <a href="{{ route('register') }}"
-                                    class="inline-block bg-indigo-600 dark:bg-indigo-500 py-2 px-4 border border-transparent rounded-md text-base font-medium text-white hover:bg-indigo-700 dark:hover:bg-indigo-600">Register</a>
-                            @endif
-                        @endauth
-                    @endif
-                </div>
+                <span class="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-purple-700 dark:from-indigo-400 dark:to-purple-400">Att-Ch8</span>
+            </div>
+            <div class="flex items-center gap-4">
+                @if (Route::has('login'))
+                    @auth
+                        <a href="{{ url('/dashboard') }}" class="inline-flex items-center justify-center py-2.5 px-6 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition-all hover:scale-105">Dashboard</a>
+                    @else
+                        <a href="{{ route('login') }}" class="hidden sm:inline-flex items-center justify-center py-2.5 px-5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors">Log in</a>
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}" class="inline-flex items-center justify-center py-2.5 px-6 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all hover:-translate-y-0.5">Start Free</a>
+                        @endif
+                    @endauth
+                @endif
             </div>
         </nav>
     </header>
 
     <!-- Hero Section -->
-    <div class="relative overflow-hidden flex-grow">
-        <div class="absolute inset-y-0 h-full w-full" aria-hidden="true">
-            <div class="relative h-full">
-                <svg class="absolute right-full transform translate-y-1/3 translate-x-1/4 md:translate-y-1/2 sm:translate-x-1/2 lg:translate-x-full"
-                    width="404" height="784" fill="none" viewBox="0 0 404 784">
-                    <defs>
-                        <pattern id="e229dbec-10e9-49ee-8ec3-0286ca089edf" x="0" y="0" width="20" height="20"
-                            patternUnits="userSpaceOnUse">
-                            <rect x="0" y="0" width="4" height="4" class="text-gray-200 dark:text-gray-800"
-                                fill="currentColor" />
-                        </pattern>
-                    </defs>
-                    <rect width="404" height="784" fill="url(#e229dbec-10e9-49ee-8ec3-0286ca089edf)" />
-                </svg>
-                <svg class="absolute left-full transform -translate-y-3/4 -translate-x-1/4 sm:-translate-x-1/2 md:-translate-y-1/2 lg:-translate-x-3/4"
-                    width="404" height="784" fill="none" viewBox="0 0 404 784">
-                    <defs>
-                        <pattern id="d2a68204-c383-44b1-b99f-42ccff4e5365" x="0" y="0" width="20" height="20"
-                            patternUnits="userSpaceOnUse">
-                            <rect x="0" y="0" width="4" height="4" class="text-gray-200 dark:text-gray-800"
-                                fill="currentColor" />
-                        </pattern>
-                    </defs>
-                    <rect width="404" height="784" fill="url(#d2a68204-c383-44b1-b99f-42ccff4e5365)" />
-                </svg>
-            </div>
-        </div>
+    <div class="relative z-10 flex-grow flex items-center pt-32 pb-20 lg:pt-48 lg:pb-32">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div class="lg:grid lg:grid-cols-12 lg:gap-16 items-center">
+                <!-- Left Content -->
+                <div class="text-center lg:text-left lg:col-span-6">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium text-sm mb-6 border border-indigo-200 dark:border-indigo-800/50">
+                        <span class="flex h-2 w-2 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                        </span>
+                        Pi-HR Automation Now Live
+                    </div>
+                    <h1 class="text-5xl tracking-tight font-extrabold text-slate-900 dark:text-white sm:leading-tight lg:text-6xl xl:text-7xl">
+                        <span class="block mb-2">Automate your checks</span>
+                        <span class="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">with Att-Ch8</span>
+                    </h1>
+                    <p class="mt-6 text-base text-slate-600 dark:text-slate-300 sm:text-lg lg:text-xl font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                        Take back your time with automated HR platform check-ins. Schedule your active windows, provide your credentials, and let our secure background workers handle your daily interactions seamlessly.
+                    </p>
+                    <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                        @if (Route::has('login'))
+                            @auth
+                                <a href="{{ url('/dashboard') }}" class="inline-flex items-center justify-center px-8 py-4 rounded-2xl text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all hover:-translate-y-1">
+                                    Go to Dashboard
+                                    <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                </a>
+                            @else
+                                <a href="{{ route('register') }}" class="inline-flex items-center justify-center px-8 py-4 rounded-xl text-lg font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 shadow-xl shadow-indigo-500/30 hover:shadow-indigo-500/50 transition-all hover:-translate-y-1">
+                                    Get Started Free
+                                </a>
+                                <a href="{{ route('login') }}" class="inline-flex items-center justify-center px-8 py-4 border-2 border-slate-200 dark:border-slate-800 text-lg font-bold rounded-xl text-slate-700 dark:text-slate-200 bg-white/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 shadow-sm transition-all hover:-translate-y-1 backdrop-blur-sm">
+                                    Sign In
+                                </a>
+                            @endauth
+                        @endif
+                    </div>
+                </div>
 
-        <div class="relative pt-32 pb-16 sm:pb-24 lg:pb-32">
-            <main class="mt-16 sm:mt-24">
-                <div class="mx-auto max-w-7xl">
-                    <div class="lg:grid lg:grid-cols-12 lg:gap-8">
-                        <div
-                            class="px-4 sm:px-6 sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left lg:flex lg:items-center">
-                            <div>
-                                <h1
-                                    class="mt-4 text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:mt-5 sm:leading-none lg:mt-6 lg:text-5xl xl:text-6xl">
-                                    <span class="block">Automate your checks</span>
-                                    <span class="block text-indigo-600 dark:text-indigo-400">with Att-Ch8</span>
-                                </h1>
-                                <p
-                                    class="mt-3 text-base text-gray-500 dark:text-gray-400 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
-                                    Take back your time with automated HR platform check-ins. Schedule your active
-                                    windows, provide your credentials, and let the background worker handle your daily
-                                    interactions seamlessly.
-                                </p>
-                                <div class="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                                    <div class="mt-3 sm:mt-0">
-                                        @if (Route::has('login'))
-                                            @auth
-                                                <a href="{{ url('/dashboard') }}"
-                                                    class="block w-full rounded-md px-5 py-3 bg-indigo-600 text-base font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:px-10">Go
-                                                    to Dashboard</a>
-                                            @else
-                                                <a href="{{ route('register') }}"
-                                                    class="block w-full rounded-md px-5 py-3 bg-indigo-600 text-base font-medium text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:px-10">Get
-                                                    started</a>
-                                            @endauth
-                                        @endif
-                                    </div>
+                <!-- Right Content (Card) -->
+                <div class="mt-20 lg:mt-0 lg:col-span-6 relative">
+                    <!-- Decorative Elements -->
+                    <div class="absolute -top-6 -right-6 w-32 h-32 bg-yellow-400/20 rounded-full blur-2xl"></div>
+                    <div class="absolute -bottom-6 -left-6 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl"></div>
+                    
+                    <div class="relative rounded-[2rem] backdrop-blur-xl bg-white/70 dark:bg-slate-900/70 border border-white/50 dark:border-slate-700/50 shadow-2xl overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"></div>
+                        <div class="p-8 sm:p-10 relative z-10">
+                            <div class="flex items-center justify-between mb-8">
+                                <span class="text-sm font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">How it works</span>
+                                <div class="flex gap-2">
+                                    <div class="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                                    <div class="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                                    <div class="h-3 w-3 rounded-full bg-indigo-500 shadow-sm shadow-indigo-500/50"></div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="mt-16 sm:mt-24 lg:mt-0 lg:col-span-6">
-                            <div
-                                class="bg-white dark:bg-gray-800 sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden shadow-xl ring-1 ring-black ring-opacity-5">
-                                <div class="px-4 py-8 sm:px-10">
+                            
+                            <div class="space-y-8">
+                                <!-- Step 1 -->
+                                <div class="group flex gap-5">
+                                    <div class="flex-shrink-0 mt-1 h-12 w-12 flex items-center justify-center rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold text-xl shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-indigo-500/30">
+                                        1
+                                    </div>
                                     <div>
-                                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">How it works</p>
-                                        <div class="mt-6 flex flex-col gap-6">
-                                            <div class="flex items-start">
-                                                <div
-                                                    class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-md bg-indigo-500 text-white">
-                                                    1
-                                                </div>
-                                                <div class="ml-4">
-                                                    <h3
-                                                        class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                                                        Connect Platform</h3>
-                                                    <p class="mt-2 text-base text-gray-500 dark:text-gray-400">Add your
-                                                        authentication details securely for platforms like Workday,
-                                                        BambooHR, etc.</p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-start">
-                                                <div
-                                                    class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-md bg-indigo-500 text-white">
-                                                    2
-                                                </div>
-                                                <div class="ml-4">
-                                                    <h3
-                                                        class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                                                        Schedule Action</h3>
-                                                    <p class="mt-2 text-base text-gray-500 dark:text-gray-400">Pick a
-                                                        time, set your latitude/longitude, and toggle the action active.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-start">
-                                                <div
-                                                    class="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-md bg-indigo-500 text-white">
-                                                    3
-                                                </div>
-                                                <div class="ml-4">
-                                                    <h3
-                                                        class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                                                        Automate & Notify</h3>
-                                                    <p class="mt-2 text-base text-gray-500 dark:text-gray-400">Our
-                                                        background workers execute the cURL request and notify you via
-                                                        Mailgun or Teams Webhook.</p>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Connect Platform</h3>
+                                        <p class="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">Add your authentication details securely for supported platforms including <span class="font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">Pi-HR</span>, Workday, BambooHR, and more.</p>
+                                    </div>
+                                </div>
+                                <!-- Step 2 -->
+                                <div class="group flex gap-5">
+                                    <div class="flex-shrink-0 mt-1 h-12 w-12 flex items-center justify-center rounded-2xl bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-extrabold text-xl shadow-inner group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-purple-500/30">
+                                        2
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Schedule Action</h3>
+                                        <p class="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">Pick a time, set your precise latitude/longitude coordinates, and toggle the automated action active.</p>
+                                    </div>
+                                </div>
+                                <!-- Step 3 -->
+                                <div class="group flex gap-5">
+                                    <div class="flex-shrink-0 mt-1 h-12 w-12 flex items-center justify-center rounded-2xl bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 font-extrabold text-xl shadow-inner group-hover:bg-pink-600 group-hover:text-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-pink-500/30">
+                                        3
+                                    </div>
+                                    <div>
+                                        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Automate & Notify</h3>
+                                        <p class="text-slate-600 dark:text-slate-400 font-medium leading-relaxed">Our robust background workers execute the payload and instantly notify you via Mailgun or Teams.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
 
     <!-- Footer -->
-    <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-auto">
-        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 md:flex md:items-center md:justify-between lg:px-8">
-            <div class="mt-8 md:mt-0 md:order-1">
-                <p class="text-center text-sm text-gray-500 dark:text-gray-400">
-                    &copy; {{ date('Y') }} Att-Ch8 Platform. All rights reserved.
-                </p>
+    <footer class="relative z-10 py-8 border-t border-slate-200/50 dark:border-slate-800/50 mt-auto backdrop-blur-lg bg-white/50 dark:bg-slate-900/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                &copy; {{ date('Y') }} Att-Ch8 Platform. All rights reserved.
+            </span>
+            <div class="flex space-x-6 text-slate-400">
             </div>
         </div>
     </footer>
 
 </body>
-
 </html>
