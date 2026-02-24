@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'debug.signed' => \App\Http\Middleware\DebugValidateSignature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

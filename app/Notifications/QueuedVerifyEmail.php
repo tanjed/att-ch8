@@ -8,6 +8,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 
 class QueuedVerifyEmail extends VerifyEmail implements ShouldQueue
 {
@@ -28,7 +29,7 @@ class QueuedVerifyEmail extends VerifyEmail implements ShouldQueue
             URL::forceScheme('http');
         }
 
-        return URL::temporarySignedRoute(
+        $url = URL::temporarySignedRoute(
             'verification.verify',
             Carbon::now()->addMinutes(Config::get('auth.verification.expire', 60)),
             [
@@ -36,5 +37,18 @@ class QueuedVerifyEmail extends VerifyEmail implements ShouldQueue
                 'hash' => sha1($notifiable->getEmailForVerification()),
             ]
         );
+
+        // Debug logging
+        Log::info('===== VERIFICATION URL GENERATED =====', [
+            'app_env' => app()->environment(),
+            'app_url' => config('app.url'),
+            'generated_url' => $url,
+            'url_scheme' => parse_url($url, PHP_URL_SCHEME),
+            'url_host' => parse_url($url, PHP_URL_HOST),
+            'url_path' => parse_url($url, PHP_URL_PATH),
+            'url_query' => parse_url($url, PHP_URL_QUERY),
+        ]);
+
+        return $url;
     }
 }
