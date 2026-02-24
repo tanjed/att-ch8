@@ -41,8 +41,6 @@ class CurlToHttpRequestTransformer
         $this->rawBody = '';
         $this->contentType = null;
 
-        Log::debug('CurlToHttpRequest: Original command', ['command' => $curlCommand]);
-
         // Step 1: Remove line continuation backslashes
         // In curl commands, backslash followed by newline (or CR+LF) is a line continuation
         // We need to handle: "curl 'url' \<newline>  -H 'header'" -> "curl 'url'   -H 'header'"
@@ -57,10 +55,10 @@ class CurlToHttpRequestTransformer
         $curlCommand = preg_replace('/\s+/', ' ', $curlCommand);
         $curlCommand = trim($curlCommand);
 
-        // Remove 'curl' prefix
+        // Remove 'curl' prefix and common flags that might appear before the URL
         $curlCommand = preg_replace('/^curl\s+/i', '', $curlCommand);
-
-        Log::debug('CurlToHttpRequest: After cleanup', ['command' => $curlCommand]);
+        $curlCommand = preg_replace('/(?:\s+|^)(?:--location|-L|--compressed|--silent|-s)(?=\s|$)/i', ' ', $curlCommand);
+        $curlCommand = trim($curlCommand);
 
         // Parse URL - look for quoted or unquoted URL at start
         if (preg_match('/^["\']([^"\']+)["\']/', $curlCommand, $matches)) {
@@ -136,12 +134,7 @@ class CurlToHttpRequestTransformer
             $this->rawBody = str_replace('\\r\\n', "\r\n", $this->rawBody);
         }
 
-        Log::debug('CurlToHttpRequest: Parsed result', [
-            'url' => $this->url,
-            'method' => $this->method,
-            'headers' => $this->headers,
-            'body_length' => strlen($this->rawBody),
-        ]);
+        Log::debug("Curl Request: [{$this->method}] {$this->url}");
     }
 
     /**
@@ -165,11 +158,18 @@ class CurlToHttpRequestTransformer
         // If we have a raw body, send it with the appropriate content type
         if (!empty($this->rawBody)) {
             $contentType = $this->contentType ?? 'application/octet-stream';
-            return $http->withBody($this->rawBody, $contentType)->send($method, $url);
+            $response = $http->withBody($this->rawBody, $contentType)->send($method, $url);
+
+            if ($response->successful()) {
+                Log::debug("Curl Response [SUCCESS]: {$response->status()} - " . substr($response->body(), 0, 500));
+            } else {
+                Log::error("Curl Response [ERROR]: {$response->status()} - " . substr($response->body(), 0, 500));
+            }
+            return $response;
         }
 
         // No body - simple request
-        return match ($method) {
+        $response = match ($method) {
             'get' => $http->get($url),
             'post' => $http->post($url),
             'put' => $http->put($url),
@@ -178,6 +178,14 @@ class CurlToHttpRequestTransformer
             'head' => $http->head($url),
             default => $http->send($method, $url),
         };
+
+        if ($response->successful()) {
+            Log::debug("Curl Response [SUCCESS]: {$response->status()} - " . substr($response->body(), 0, 500));
+        } else {
+            Log::error("Curl Response [ERROR]: {$response->status()} - " . substr($response->body(), 0, 500));
+        }
+
+        return $response;
     }
 
     /**

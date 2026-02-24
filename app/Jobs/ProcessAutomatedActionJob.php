@@ -112,11 +112,9 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     $authCurl = str_replace('[PASSWORD]', $credential->password, $authCurl);
 
                     $jsonResponse = $this->fetchAuthResponse($authCurl);
-                    Log::debug($jsonResponse);
 
                     if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
                         $token = data_get($jsonResponse, $platform->auth_token_key);
-                        Log::debug($token);
                         $credential->access_token = $token;
                         if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
                             $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
