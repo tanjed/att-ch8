@@ -46,7 +46,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         $selectedUserId = $request->user_id;
 
         // KPI Calculations
-        $totalCredentials = \App\Models\Credential::count();
+        $totalCredentials = \App\Models\UserPlatformCredential::count();
         $totalActions = \App\Models\UserActionSetting::count();
         $totalUsers = \App\Models\User::count();
         $verifiedUsers = \App\Models\User::whereNotNull('email_verified_at')->count();
