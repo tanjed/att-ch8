@@ -4,15 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
         Schema::table('platforms', function (Blueprint $table) {
-            //
+            $table->text('calendar_api_curl_template')->nullable()->after('related_auth_curl');
         });
     }
 
@@ -22,7 +21,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('platforms', function (Blueprint $table) {
-            //
+            $table->dropColumn('calendar_api_curl_template');
         });
     }
 };
