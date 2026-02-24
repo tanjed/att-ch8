@@ -12,6 +12,7 @@ use App\Models\ActionLog;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use App\Mail\AttendanceSubmitted;
+use Log;
 
 class ProcessAutomatedActionJob implements ShouldQueue
 {
@@ -109,9 +110,11 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     $authCurl = trim(preg_replace('/\s+/', ' ', str_replace(["\\\r\n", "\\\n", "\\\r", "\\\t", "\\"], [' ', ' ', ' ', ' ', ''], $authCurl)));
 
                     $jsonResponse = $this->fetchAuthResponse($authCurl);
+                    Log::debug($jsonResponse);
 
                     if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
                         $token = data_get($jsonResponse, $platform->auth_token_key);
+                        Log::debug($token);
                         $credential->access_token = $token;
                         if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
                             $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
