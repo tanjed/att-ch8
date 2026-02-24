@@ -43,15 +43,26 @@ class CurlToHttpRequestTransformer
 
         Log::debug('CurlToHttpRequest: Original command', ['command' => $curlCommand]);
 
-        // Normalize line endings and whitespace for parsing
+        // Step 1: Remove line continuation backslashes
+        // In curl commands, backslash followed by newline (or CR+LF) is a line continuation
+        // We need to handle: "curl 'url' \<newline>  -H 'header'" -> "curl 'url'   -H 'header'"
+        // But NOT remove backslashes that are part of data like \r\n inside quotes
+
+        // First, normalize actual line breaks (not \r\n literals in data)
+        // These are real newline characters in the stored string
+        $curlCommand = preg_replace('/\\\\[\r\n]+/', ' ', $curlCommand);
         $curlCommand = str_replace(["\r\n", "\r", "\n"], ' ', $curlCommand);
+
+        // Step 2: Normalize multiple whitespace to single space
+        $curlCommand = preg_replace('/\s+/', ' ', $curlCommand);
+        $curlCommand = trim($curlCommand);
 
         // Remove 'curl' prefix
         $curlCommand = preg_replace('/^curl\s+/i', '', $curlCommand);
 
         Log::debug('CurlToHttpRequest: After cleanup', ['command' => $curlCommand]);
 
-        // Parse URL - look for quoted or unquoted URL at start or after options
+        // Parse URL - look for quoted or unquoted URL at start
         if (preg_match('/^["\']([^"\']+)["\']/', $curlCommand, $matches)) {
             $this->url = $matches[1];
         } elseif (preg_match('/^([^\s]+)/', $curlCommand, $matches)) {
@@ -85,16 +96,21 @@ class CurlToHttpRequestTransformer
             }
         }
 
-        // Parse data - try different flags
+        // Parse data - try different flags with more flexible patterns
+        // Handle both quoted and unquoted data values
         $dataPatterns = [
             '/--data-raw\s+\'([^\']+)\'/s',
             '/--data-raw\s+"([^"]+)"/s',
+            '/--data-raw\s+([^\s\'"]\S*)/s',  // unquoted data
             '/--data\s+\'([^\']+)\'/s',
             '/--data\s+"([^"]+)"/s',
+            '/--data\s+([^\s\'"]\S*)/s',
             '/-d\s+\'([^\']+)\'/s',
             '/-d\s+"([^"]+)"/s',
+            '/-d\s+([^\s\'"]\S*)/s',
             '/--data-binary\s+\'([^\']+)\'/s',
             '/--data-binary\s+"([^"]+)"/s',
+            '/--data-binary\s+([^\s\'"]\S*)/s',
         ];
 
         foreach ($dataPatterns as $pattern) {
