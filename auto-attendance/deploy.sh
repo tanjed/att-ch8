@@ -14,6 +14,12 @@ git pull origin master
 echo "[->] Rebuilding and starting Docker containers..."
 docker compose up -d --build
 
+echo "[->] Waiting for Database to Initialize..."
+sleep 15
+
+echo "[->] Fixing storage and cache permissions for NPM and PHP..."
+docker exec -u root app-app-1 chown -R admin:admin /var/www
+
 echo "[->] Running database migrations..."
 docker exec app-app-1 php artisan migrate --force
 
