@@ -35,5 +35,6 @@ docker exec app-app-1 php artisan view:cache
 
 echo "[->] Restarting Queue Workers..."
 docker restart app-queue-1
+docker restart app-web-1
 
 echo "Deployment Complete! 🚀"
