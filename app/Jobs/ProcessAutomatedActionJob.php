@@ -12,6 +12,7 @@ use App\Models\ActionLog;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Cache;
 use App\Mail\AttendanceSubmitted;
+use App\Services\CurlToHttpRequestTransformer;
 use Log;
 
 class ProcessAutomatedActionJob implements ShouldQueue
@@ -81,7 +82,6 @@ class ProcessAutomatedActionJob implements ShouldQueue
                 if ($platform->refresh_curl_template && $credential->refresh_token) {
                     $refreshCurl = $platform->refresh_curl_template;
                     $refreshCurl = str_replace('[REFRESH_TOKEN]', $credential->refresh_token, $refreshCurl);
-                    $refreshCurl = trim(preg_replace('/\s+/', ' ', str_replace(["\\\r\n", "\\\n", "\\\r", "\\\t", "\\"], [' ', ' ', ' ', ' ', ''], $refreshCurl)));
 
                     $jsonResponse = $this->fetchAuthResponse($refreshCurl);
 
@@ -107,7 +107,6 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
                     $authCurl = str_replace('[USERNAME]', $credential->username, $authCurl);
                     $authCurl = str_replace('[PASSWORD]', $credential->password, $authCurl);
-                    $authCurl = trim(preg_replace('/\s+/', ' ', str_replace(["\\\r\n", "\\\n", "\\\r", "\\\t", "\\"], [' ', ' ', ' ', ' ', ''], $authCurl)));
 
                     $jsonResponse = $this->fetchAuthResponse($authCurl);
                     Log::debug($jsonResponse);
@@ -139,10 +138,23 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
     private function fetchAuthResponse($curlCommand)
     {
-        $output = shell_exec($curlCommand . ' -s');
-        if (!$output)
+        try {
+            $transformer = new CurlToHttpRequestTransformer();
+            $response = $transformer->execute($curlCommand);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('Auth request failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
             return null;
-        return json_decode($output, true);
+        } catch (\Exception $e) {
+            Log::error('Auth request exception', ['message' => $e->getMessage()]);
+            return null;
+        }
     }
 
     private function executeAction($curlTemplate, $token, $credential)
@@ -162,20 +174,21 @@ class ProcessAutomatedActionJob implements ShouldQueue
             $curl .= " -H 'Authorization: Bearer {$token}'";
         }
 
-        // Clean up formatting
-        $curl = trim(preg_replace('/\s+/', ' ', str_replace(["\\\r\n", "\\\n", "\\\r", "\\\t", "\\"], [' ', ' ', ' ', ' ', ''], $curl)));
+        try {
+            $transformer = new CurlToHttpRequestTransformer();
+            $response = $transformer->execute($curl);
 
-        // execute and append HTTP status code
-        $output = shell_exec($curl . ' -s -w "%{http_code}"');
-
-        $httpCode = (int) substr($output, -3);
-        $bodyRaw = substr($output, 0, -3);
-        $body = json_decode($bodyRaw, true) ?? $bodyRaw;
-
-        return [
-            'status' => $httpCode,
-            'body' => $body
-        ];
+            return [
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('Action request exception', ['message' => $e->getMessage()]);
+            return [
+                'status' => 500,
+                'body' => ['error' => $e->getMessage()],
+            ];
+        }
     }
 
     private function logAction($setting, $status, $response)
