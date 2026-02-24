@@ -13,6 +13,7 @@ class Platform extends Model
         'auth_token_key',
         'refresh_curl_template',
         'refresh_token_key',
+        'related_auth_curl',
     ];
 
     public function actions()

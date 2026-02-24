@@ -60,21 +60,24 @@ class ProcessAutomatedActionJob implements ShouldQueue
         }
 
         try {
-            $token = $credential->access_token;
+            // Token Cache Key
+            $tokenCacheKey = "platform_token_{$credential->id}";
+            $token = Cache::get($tokenCacheKey, $credential->access_token);
             $needsNewToken = empty($token);
 
-            // If we have a cached token, try it first
+            // If we have a token (cached or DB), try it first
             if (!$needsNewToken) {
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
                 if ($response['status'] == 401 || $response['status'] == 403) {
                     $needsNewToken = true;
+                    Cache::forget($tokenCacheKey); // Bust the cache on auth failure
                 } else {
                     $this->logAction($setting, 'success', json_encode($response['body']));
                     return;
                 }
             }
 
-            // If we need a new token (or previous one failed with 401)
+            // If we need a new token (or previous one failed with 401/403)
             if ($needsNewToken) {
                 $tokenFetched = false;
 
@@ -125,6 +128,14 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     }
                 }
 
+                // Cache the newly fetched token for 60 minutes
+                Cache::put($tokenCacheKey, $token, now()->addMinutes(60));
+
+                // Execute the intermediate related_auth_curl if defined on the platform
+                if ($platform->related_auth_curl) {
+                    $this->fetchRelatedAuthUrl($token, $platform->related_auth_curl);
+                }
+
                 // Now execute the actual action with the fresh token
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
 
@@ -154,6 +165,32 @@ class ProcessAutomatedActionJob implements ShouldQueue
         } catch (\Exception $e) {
             Log::error('Auth request exception', ['message' => $e->getMessage()]);
             return null;
+        }
+    }
+
+    private function fetchRelatedAuthUrl($token, $relatedAuthCurlTemplate)
+    {
+        try {
+            // Replace [TOKEN] dynamically if present in the template, otherwise append the header manually just in case
+            $curl = str_replace('[TOKEN]', $token, $relatedAuthCurlTemplate);
+
+            if (!str_contains($relatedAuthCurlTemplate, '[TOKEN]')) {
+                $curl .= " -H 'Authorization: Bearer {$token}'";
+            }
+
+            $transformer = new CurlToHttpRequestTransformer();
+            $response = $transformer->execute($curl);
+
+            if ($response->successful()) {
+                Log::info('Successfully hit related auth URL', ['status' => $response->status()]);
+            } else {
+                Log::warning('Related auth URL failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Related auth URL exception', ['message' => $e->getMessage()]);
         }
     }
 

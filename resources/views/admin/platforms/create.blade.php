@@ -88,6 +88,18 @@
                             <x-input-error :messages="$errors->get('refresh_token_key')" class="mt-2" />
                         </div>
 
+                        <!-- Related Auth cURL Template -->
+                        <div class="mt-4 border-t pt-4">
+                            <x-input-label for="related_auth_curl" :value="__('Related Auth cURL Template (Optional)')" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                An intermediate API call that should occur right after login prior to the main action.
+                                E.g., a "user-screen-permissions" call. Use <strong>[TOKEN]</strong> dynamically.
+                            </p>
+                            <textarea id="related_auth_curl" name="related_auth_curl" rows="4"
+                                class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm block w-full">{{ old('related_auth_curl') }}</textarea>
+                            <x-input-error :messages="$errors->get('related_auth_curl')" class="mt-2" />
+                        </div>
+
                         <div class="flex items-center justify-end mt-4">
                             <a href="{{ route('admin.platforms.index') }}"
                                 class="text-gray-500 hover:text-gray-700 mr-4">Cancel</a>
