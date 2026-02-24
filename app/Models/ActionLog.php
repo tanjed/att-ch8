@@ -15,4 +15,14 @@ class ActionLog extends Model
         'status',
         'response',
     ];
+
+    public function platformAction()
+    {
+        return $this->belongsTo(PlatformAction::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
