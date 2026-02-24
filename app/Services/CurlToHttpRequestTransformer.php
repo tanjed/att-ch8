@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Log;
 
 class CurlToHttpRequestTransformer
 {
@@ -40,11 +41,15 @@ class CurlToHttpRequestTransformer
         $this->rawBody = '';
         $this->contentType = null;
 
+        Log::debug('CurlToHttpRequest: Original command', ['command' => $curlCommand]);
+
         // Normalize line endings and whitespace for parsing
         $curlCommand = str_replace(["\r\n", "\r", "\n"], ' ', $curlCommand);
 
         // Remove 'curl' prefix
         $curlCommand = preg_replace('/^curl\s+/i', '', $curlCommand);
+
+        Log::debug('CurlToHttpRequest: After cleanup', ['command' => $curlCommand]);
 
         // Parse URL - look for quoted or unquoted URL at start or after options
         if (preg_match('/^["\']([^"\']+)["\']/', $curlCommand, $matches)) {
@@ -108,6 +113,13 @@ class CurlToHttpRequestTransformer
         if (str_contains($this->rawBody, '\\r\\n')) {
             $this->rawBody = str_replace('\\r\\n', "\r\n", $this->rawBody);
         }
+
+        Log::debug('CurlToHttpRequest: Parsed result', [
+            'url' => $this->url,
+            'method' => $this->method,
+            'headers' => $this->headers,
+            'body_length' => strlen($this->rawBody),
+        ]);
     }
 
     /**
@@ -124,7 +136,9 @@ class CurlToHttpRequestTransformer
         $headersToSend = $this->headers;
         unset($headersToSend['Content-Type'], $headersToSend['content-type']);
 
-        $http = Http::withHeaders($headersToSend);
+        $http = Http::withHeaders($headersToSend)
+            ->withoutVerifying() // Match curl's default behavior for development
+            ->maxRedirects(10);   // Follow redirects like curl
 
         // If we have a raw body, send it with the appropriate content type
         if (!empty($this->rawBody)) {
