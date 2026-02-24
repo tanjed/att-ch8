@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\UserActionSetting;
 use App\Models\ActionLog;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
 use App\Mail\AttendanceSubmitted;
 
 class ProcessAutomatedActionJob implements ShouldQueue
@@ -183,6 +184,15 @@ class ProcessAutomatedActionJob implements ShouldQueue
             'response' => $response,
             'executed_at' => now(),
         ]);
+        // 4. Set the cache for the rest of the day to signify completion
+        $cacheKey = "action_executed_{$setting->id}_" . now()->format('Y-m-d');
+        if ($status === 'success') {
+            Cache::put($cacheKey, 'completed', now()->endOfDay());
+        } else {
+            // Optional: You could remove the cache lock if it fails so it tries again later today
+            // Cache::forget($cacheKey);
+            Cache::put($cacheKey, 'failed', now()->endOfDay());
+        }
 
         try {
             Mail::to($setting->user->email)->send(new AttendanceSubmitted($setting, $status, $response));

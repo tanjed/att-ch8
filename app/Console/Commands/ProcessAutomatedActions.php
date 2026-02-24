@@ -56,20 +56,30 @@ class ProcessAutomatedActions extends Command
             // per day even if target_time <= currentTime continues to match
             $cacheKey = "action_executed_{$setting->id}_{$now->format('Y-m-d')}";
 
-            if (Cache::add($cacheKey, true, $now->copy()->endOfDay())) {
-                // Fallback: Check the database to make sure it wasn't already executed today (in case Cache was flushed/failed)
+            // 1. Check Cache first
+            if (!Cache::has($cacheKey)) {
+                // 2. Check Database Fallback
                 $alreadyExecuted = ActionLog::where('user_id', $setting->user_id)
                     ->where('platform_action_id', $setting->platform_action_id)
                     ->whereDate('executed_at', $now->format('Y-m-d'))
                     ->exists();
 
+                // 3. Dispatch if not executed
                 if (!$alreadyExecuted) {
+                    // Set a temporary 'processing' cache lock to prevent the cron from 
+                    // dispatching duplicates every minute while the job is waiting in the queue
+                    Cache::put($cacheKey, 'processing', $now->copy()->addMinutes(15));
+
                     ProcessAutomatedActionJob::dispatch($setting->id);
                     $this->info("Queued background job for setting ID: {$setting->id}");
                     $dispatchedCount++;
                 } else {
                     $this->info("Skipped background job for setting ID: {$setting->id} (Found in DB Fallback)");
+                    // Repair the cache since it was missing but found in DB
+                    Cache::put($cacheKey, 'completed', $now->copy()->endOfDay());
                 }
+            } else {
+                $this->info("Skipped background job for setting ID: {$setting->id} (Found in Cache)");
             }
         }
 
