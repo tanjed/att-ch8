@@ -31,14 +31,50 @@
 
                         <!-- Target Time -->
                         <div class="mt-4">
-                            <x-input-label for="target_time" :value="__('Time (24-hour format)')" />
+                            <x-input-label for="target_time" :value="__('Target Time (24-hour format)')" />
                             <x-text-input id="target_time" class="block mt-1 w-full" type="time" name="target_time"
                                 :value="old('target_time', \Carbon\Carbon::parse($action->target_time)->format('H:i'))"
                                 required onclick="this.showPicker()" />
                             <x-input-error :messages="$errors->get('target_time')" class="mt-2" />
                         </div>
 
+                        <!-- Buffer Minutes -->
+                        <div class="mt-4">
+                            <x-input-label for="buffer_minutes" :value="__('Buffer Minutes (Optional)')" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                For example, entering <strong>10</strong> means the action will fire randomly within
+                                &plusmn;10 minutes of the Target Time. Next Execution Time will automatically
+                                recalculate once updated.
+                            </p>
+                            <x-text-input id="buffer_minutes" class="block mt-1 w-full" type="number" min="0"
+                                name="buffer_minutes" :value="old('buffer_minutes', $action->buffer_minutes)" />
+                            <x-input-error :messages="$errors->get('buffer_minutes')" class="mt-2" />
+                        </div>
 
+                        <!-- Display Calculated Next Execution Time -->
+                        @if($action->buffer_minutes > 0)
+                            <div
+                                class="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
+                                <p class="text-sm text-gray-700 dark:text-gray-300">
+                                    <span class="font-semibold">Next Scheduled Automation:</span>
+                                    <span>
+                                        {{ \Carbon\Carbon::parse($action->next_execution_time)->format('h:i A') }}
+                                        (randomized by buffer)
+                                    </span>
+                                </p>
+                            </div>
+                        @else
+                            <div
+                                class="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-600">
+                                <p class="text-sm text-gray-700 dark:text-gray-300">
+                                    <span class="font-semibold">Next Scheduled Automation:</span>
+                                    <span>
+                                        {{ \Carbon\Carbon::parse($action->target_time)->format('h:i A') }}
+                                        (no buffer applied)
+                                    </span>
+                                </p>
+                            </div>
+                        @endif
 
                         <!-- Active Toggle -->
                         <div class="mt-4">

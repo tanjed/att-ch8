@@ -13,6 +13,8 @@ class UserActionSetting extends Model
         'latitude',
         'longitude',
         'is_active',
+        'buffer_minutes',
+        'next_execution_time',
     ];
 
     public function user()

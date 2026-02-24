@@ -34,9 +34,21 @@ class ActionSettingController extends Controller
         $validated = $request->validate([
             'platform_action_id' => 'required|exists:platform_actions,id',
             'target_time' => 'required|date_format:H:i',
+            'buffer_minutes' => 'nullable|integer|min:0',
         ]);
 
+        $carbonTime = \Carbon\Carbon::parse($validated['target_time']);
+        $validated['target_time'] = $carbonTime->format('H:i:s'); // Ensure it saves as valid time object
         $validated['is_active'] = $request->has('is_active');
+        $buffer = $validated['buffer_minutes'] ?? 0;
+
+        // Calculate the initial next_execution_time based on buffer
+        if ($buffer > 0) {
+            $randomOffset = rand(-$buffer, $buffer);
+            $validated['next_execution_time'] = $carbonTime->addMinutes($randomOffset)->format('H:i:s');
+        } else {
+            $validated['next_execution_time'] = $validated['target_time'];
+        }
 
         auth()->user()->actionSettings()->create($validated);
 
@@ -68,11 +80,21 @@ class ActionSettingController extends Controller
         $validated = $request->validate([
             'platform_action_id' => 'required|exists:platform_actions,id',
             'target_time' => 'required|date_format:H:i',
+            'buffer_minutes' => 'nullable|integer|min:0',
         ]);
 
         $carbonTime = \Carbon\Carbon::parse($validated['target_time']);
         $validated['target_time'] = $carbonTime->format('H:i:s'); // Ensure it saves as valid time object
         $validated['is_active'] = $request->has('is_active');
+        $buffer = $validated['buffer_minutes'] ?? 0;
+
+        // Calculate a new next_execution_time based on the updated settings
+        if ($buffer > 0) {
+            $randomOffset = rand(-$buffer, $buffer);
+            $validated['next_execution_time'] = $carbonTime->copy()->addMinutes($randomOffset)->format('H:i:s');
+        } else {
+            $validated['next_execution_time'] = $validated['target_time'];
+        }
 
         $action->update($validated);
 

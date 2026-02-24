@@ -33,7 +33,10 @@
                                         Platform Action</th>
                                     <th
                                         class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                        Time</th>
+                                        Target Time</th>
+                                    <th
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        Next Execution Time</th>
                                     <th
                                         class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                         Status</th>
@@ -52,6 +55,13 @@
                                         </td>
                                         <td class="p-4 border-b border-gray-50 dark:border-gray-600">
                                             {{ \Carbon\Carbon::parse($setting->target_time)->format('h:i A') }}
+                                            @if($setting->buffer_minutes > 0)
+                                                <span class="text-xs text-gray-400 block">&plusmn;{{ $setting->buffer_minutes }}
+                                                    mins</span>
+                                            @endif
+                                        </td>
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                            {{ \Carbon\Carbon::parse($setting->next_execution_time)->format('h:i A') }}
                                         </td>
                                         <td class="p-4 border-b border-gray-50 dark:border-gray-600">
                                             @if($setting->is_active)

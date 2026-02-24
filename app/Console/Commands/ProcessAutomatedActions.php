@@ -41,7 +41,7 @@ class ProcessAutomatedActions extends Command
         // Find active settings matching the current time or earlier 
         // to ensure no actions get missed if cron drops for a few minutes
         $settings = UserActionSetting::where('is_active', true)
-            ->where('target_time', '<=', $currentTime)
+            ->where('next_execution_time', '<=', $currentTime)
             ->get();
 
         if ($settings->isEmpty()) {

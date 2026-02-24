@@ -252,5 +252,18 @@ class ProcessAutomatedActionJob implements ShouldQueue
         } catch (\Exception $e) {
             info("Failed to send email to {$setting->user->email}: " . $e->getMessage());
         }
+
+        // Lastly, compute the new `next_execution_time` for tomorrow's run.
+        if ($setting->buffer_minutes > 0) {
+            $randomOffset = rand(-$setting->buffer_minutes, $setting->buffer_minutes);
+            $newTime = \Carbon\Carbon::parse($setting->target_time)->addMinutes($randomOffset)->format('H:i:s');
+        } else {
+            $newTime = $setting->target_time;
+        }
+
+        $setting->update([
+            'next_execution_time' => $newTime
+        ]);
+        Log::info("Calculated new execution time for setting {$setting->id}: {$newTime}");
     }
 }

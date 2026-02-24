@@ -33,13 +33,24 @@
 
                         <!-- Target Time -->
                         <div class="mt-4">
-                            <x-input-label for="target_time" :value="__('Time (24-hour format)')" />
+                            <x-input-label for="target_time" :value="__('Target Time (24-hour format)')" />
                             <x-text-input id="target_time" class="block mt-1 w-full" type="time" name="target_time"
                                 :value="old('target_time')" required onclick="this.showPicker()" />
                             <x-input-error :messages="$errors->get('target_time')" class="mt-2" />
                         </div>
 
-
+                        <!-- Buffer Minutes -->
+                        <div class="mt-4">
+                            <x-input-label for="buffer_minutes" :value="__('Buffer Minutes (Optional)')" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                For example, entering <strong>10</strong> means the action will fire randomly within
+                                &plusmn;10 minutes of the Target Time. Next Execution Time will automatically calculate
+                                once scheduled.
+                            </p>
+                            <x-text-input id="buffer_minutes" class="block mt-1 w-full" type="number" min="0"
+                                name="buffer_minutes" :value="old('buffer_minutes', 0)" />
+                            <x-input-error :messages="$errors->get('buffer_minutes')" class="mt-2" />
+                        </div>
 
                         <!-- Active Toggle -->
                         <div class="mt-4">
