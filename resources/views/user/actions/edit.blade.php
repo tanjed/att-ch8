@@ -34,7 +34,7 @@
                             <x-input-label for="target_time" :value="__('Time (24-hour format)')" />
                             <x-text-input id="target_time" class="block mt-1 w-full" type="time" name="target_time"
                                 :value="old('target_time', \Carbon\Carbon::parse($action->target_time)->format('H:i'))"
-                                required />
+                                required onclick="this.showPicker()" />
                             <x-input-error :messages="$errors->get('target_time')" class="mt-2" />
                         </div>
 

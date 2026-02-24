@@ -24,64 +24,66 @@
                         </div>
                     @endif
 
-                    <table class="w-full text-left table-auto min-w-max">
-                        <thead>
-                            <tr>
-                                <th
-                                    class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                    Platform Action</th>
-                                <th
-                                    class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                    Time</th>
-                                <th
-                                    class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                    Status</th>
-                                <th
-                                    class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                    Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($actionSettings as $setting)
-                                <tr
-                                    class="hover:bg-gray-50 dark:hover:bg-gray-700 {{ !$setting->is_active ? 'opacity-50' : '' }}">
-                                    <td class="p-4 border-b border-gray-50 dark:border-gray-600">
-                                        {{ $setting->platformAction->platform->name }} -
-                                        {{ $setting->platformAction->name }}
-                                    </td>
-                                    <td class="p-4 border-b border-gray-50 dark:border-gray-600">
-                                        {{ \Carbon\Carbon::parse($setting->target_time)->format('h:i A') }}
-                                    </td>
-                                    <td class="p-4 border-b border-gray-50 dark:border-gray-600">
-                                        @if($setting->is_active)
-                                            <span
-                                                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
-                                        @else
-                                            <span
-                                                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Inactive</span>
-                                        @endif
-                                    </td>
-                                    <td class="p-4 border-b border-gray-50 dark:border-gray-600">
-                                        <a href="{{ route('user.actions.edit', $setting) }}"
-                                            class="text-blue-500 hover:underline mr-2">Edit</a>
-                                        <form action="{{ route('user.actions.destroy', $setting) }}" method="POST"
-                                            class="inline-block"
-                                            onsubmit="return confirm('Delete this scheduled action?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="text-red-500 hover:underline">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            @if($actionSettings->isEmpty())
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left table-auto min-w-max">
+                            <thead>
                                 <tr>
-                                    <td colspan="4" class="p-4 text-center">You haven't scheduled any automated actions.
-                                    </td>
+                                    <th
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        Platform Action</th>
+                                    <th
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        Time</th>
+                                    <th
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        Status</th>
+                                    <th
+                                        class="p-4 border-b border-gray-100 bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                        Actions</th>
                                 </tr>
-                            @endif
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach($actionSettings as $setting)
+                                    <tr
+                                        class="hover:bg-gray-50 dark:hover:bg-gray-700 {{ !$setting->is_active ? 'opacity-50' : '' }}">
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                            {{ $setting->platformAction->platform->name }} -
+                                            {{ $setting->platformAction->name }}
+                                        </td>
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                            {{ \Carbon\Carbon::parse($setting->target_time)->format('h:i A') }}
+                                        </td>
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                            @if($setting->is_active)
+                                                <span
+                                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                            @else
+                                                <span
+                                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                                            @endif
+                                        </td>
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                            <a href="{{ route('user.actions.edit', $setting) }}"
+                                                class="text-blue-500 hover:underline mr-2">Edit</a>
+                                            <form action="{{ route('user.actions.destroy', $setting) }}" method="POST"
+                                                class="inline-block"
+                                                onsubmit="return confirm('Delete this scheduled action?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-500 hover:underline">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                                @if($actionSettings->isEmpty())
+                                    <tr>
+                                        <td colspan="4" class="p-4 text-center">You haven't scheduled any automated actions.
+                                        </td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
