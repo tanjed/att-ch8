@@ -33,11 +33,39 @@ Route::middleware('auth')->group(function () {
 
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', function () {
-        $allActions = \App\Models\UserActionSetting::with(['user', 'platformAction.platform'])
-            ->orderBy('next_execution_time', 'asc')
-            ->get();
-        return view('admin.dashboard', compact('allActions'));
+    Route::get('/', function (\Illuminate\Http\Request $request) {
+        $users = \App\Models\User::whereHas('actionSettings')->orWhereHas('credentials')->orderBy('name')->get();
+
+        $query = \App\Models\UserActionSetting::with(['user', 'platformAction.platform']);
+
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        $allActions = $query->orderBy('next_execution_time', 'asc')->get();
+        $selectedUserId = $request->user_id;
+
+        // KPI Calculations
+        $totalCredentials = \App\Models\Credential::count();
+        $totalActions = \App\Models\UserActionSetting::count();
+        $totalUsers = \App\Models\User::count();
+        $verifiedUsers = \App\Models\User::whereNotNull('email_verified_at')->count();
+        $todayExecutions = \App\Models\ActionLog::whereDate('created_at', today())->count();
+        $todaySuccess = \App\Models\ActionLog::whereDate('created_at', today())->where('status', 'success')->count();
+        $todayFailed = \App\Models\ActionLog::whereDate('created_at', today())->where('status', 'failed')->count();
+
+        return view('admin.dashboard', compact(
+            'allActions',
+            'users',
+            'selectedUserId',
+            'totalCredentials',
+            'totalActions',
+            'totalUsers',
+            'verifiedUsers',
+            'todayExecutions',
+            'todaySuccess',
+            'todayFailed'
+        ));
     })->name('dashboard');
 
     Route::resource('platforms', \App\Http\Controllers\Admin\PlatformController::class);
