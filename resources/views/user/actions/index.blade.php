@@ -49,13 +49,14 @@
                                 @foreach($actionSettings as $setting)
                                     <tr
                                         class="hover:bg-gray-50 dark:hover:bg-gray-700 {{ !$setting->is_active ? 'opacity-50' : '' }}">
-                                        {{ $setting->platformAction->platform->name }} -
-                                        {{ $setting->platformAction->name }}
-                                        @if(!empty($setting->weekly_off_days))
-                                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                <strong>Off Days:</strong> {{ implode(', ', $setting->weekly_off_days) }}
-                                            </div>
-                                        @endif
+                                        <td class="p-4 border-b border-gray-50 dark:border-gray-600">
+                                            {{ $setting->platformAction->platform->name }} -
+                                            {{ $setting->platformAction->name }}
+                                            @if(!empty($setting->weekly_off_days))
+                                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                    <strong>Off Days:</strong> {{ implode(', ', $setting->weekly_off_days) }}
+                                                </div>
+                                            @endif
                                         </td>
                                         <td class="p-4 border-b border-gray-50 dark:border-gray-600 align-top">
                                             {{ \Carbon\Carbon::parse($setting->target_time)->format('h:i A') }}

@@ -38,6 +38,7 @@ class PlatformController extends Controller
             'refresh_curl_template' => 'nullable|string',
             'refresh_token_key' => 'nullable|string|max:255',
             'related_auth_curl' => 'nullable|string',
+            'calendar_api_curl_template' => 'nullable|string',
         ]);
 
         if ($request->hasFile('icon')) {
@@ -79,6 +80,7 @@ class PlatformController extends Controller
             'refresh_curl_template' => 'nullable|string',
             'refresh_token_key' => 'nullable|string|max:255',
             'related_auth_curl' => 'nullable|string',
+            'calendar_api_curl_template' => 'nullable|string',
         ]);
 
         if ($request->hasFile('icon')) {

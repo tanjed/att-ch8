@@ -14,6 +14,7 @@ class Platform extends Model
         'refresh_curl_template',
         'refresh_token_key',
         'related_auth_curl',
+        'calendar_api_curl_template',
     ];
 
     public function actions()

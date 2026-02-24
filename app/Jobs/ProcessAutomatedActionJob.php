@@ -67,6 +67,10 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
             // If we have a token (cached or DB), try it first
             if (!$needsNewToken) {
+                if (!$this->evaluateCalendarApi($platform, $token, $credential, $setting)) {
+                    return;
+                }
+
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
                 if ($response['status'] == 401 || $response['status'] == 403) {
                     $needsNewToken = true;
@@ -134,6 +138,10 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     $this->fetchRelatedAuthUrl($token, $platform->related_auth_curl);
                 }
 
+                if (!$this->evaluateCalendarApi($platform, $token, $credential, $setting)) {
+                    return;
+                }
+
                 // Now execute the actual action with the fresh token
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
 
@@ -142,6 +150,83 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
         } catch (\Exception $e) {
             $this->logAction($setting, 'failed', $e->getMessage());
+        }
+    }
+
+    private function evaluateCalendarApi($platform, $token, $credential, $setting)
+    {
+        if (empty($platform->calendar_api_curl_template)) {
+            return true;
+        }
+
+        $today = now()->format('Y-m-d');
+        $cacheKey = "calendar_off_day_{$credential->id}_{$today}";
+
+        if (Cache::get($cacheKey) === 'skipped') {
+            $this->logAction($setting, 'skipped', 'Skipped due to Calendar API (Holiday/Leave/Weekend)');
+            return false;
+        }
+
+        if (Cache::get($cacheKey) === 'working') {
+            return true;
+        }
+
+        try {
+            $curl = $platform->calendar_api_curl_template;
+            $curl = str_replace('[TOKEN]', $token, $curl);
+            $curl = str_replace('[MONTH_START_DATE_URL]', now()->startOfMonth()->format('d%2Fm%2FY'), $curl);
+            $curl = str_replace('[MONTH_END_DATE_URL]', now()->endOfMonth()->format('d%2Fm%2FY'), $curl);
+            $curl = str_replace('[TODAY_DATE_URL]', now()->format('d%2Fm%2FY'), $curl);
+
+            if (!str_contains($platform->calendar_api_curl_template, '[TOKEN]')) {
+                $curl .= " -H 'Authorization: Bearer {$token}'";
+            }
+
+            $transformer = new CurlToHttpRequestTransformer();
+            $response = $transformer->execute($curl);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if (isset($data['calendar']) && isset($data['flags'])) {
+                    $todayFormatted = now()->format('d/m/Y');
+                    $todayColor = $data['calendar'][$todayFormatted] ?? null;
+
+                    if ($todayColor) {
+                        $flags = collect($data['flags']);
+                        $matchingFlag = $flags->firstWhere('color', $todayColor);
+
+                        if ($matchingFlag) {
+                            $flagCode = $matchingFlag['flag'] ?? '';
+                            // H: Holiday, L: Leave, W: Weekend, A: Absent
+                            if (in_array(strtoupper($flagCode), ['H', 'L', 'W', 'A'])) {
+                                Cache::put($cacheKey, 'skipped', now()->endOfDay());
+                                $this->logAction($setting, 'skipped', "Skipped due to Calendar API matching off-day flag: {$matchingFlag['flag_full_name']}");
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                Cache::put($cacheKey, 'working', now()->endOfDay());
+                return true;
+            }
+
+            if ($response->status() == 401 || $response->status() == 403) {
+                // Return true without caching so the main loop can bust the token cache and retry
+                return true;
+            }
+
+            Log::error('Calendar API failed', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+            // If the Calendar API is down, we default to running the action so users don't miss attendance
+            Cache::put($cacheKey, 'working', now()->endOfDay());
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Calendar API exception', ['message' => $e->getMessage()]);
+            return true;
         }
     }
 
@@ -235,7 +320,7 @@ class ProcessAutomatedActionJob implements ShouldQueue
         ]);
         // 4. Set the cache for the rest of the day to signify completion
         $cacheKey = "action_executed_{$setting->id}_" . now()->format('Y-m-d');
-        if ($status === 'success') {
+        if ($status === 'success' || $status === 'skipped') {
             Cache::put($cacheKey, 'completed', now()->endOfDay());
         } else {
             // Optional: You could remove the cache lock if it fails so it tries again later today

@@ -109,6 +109,20 @@
                             <x-input-error :messages="$errors->get('related_auth_curl')" class="mt-2" />
                         </div>
 
+                        <!-- Calendar API cURL Template -->
+                        <div class="mt-4 border-t pt-4">
+                            <x-input-label for="calendar_api_curl_template" :value="__('Calendar API cURL Template (Optional)')" />
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                                Used to dynamically skip background actions on holidays or leaves. Use
+                                <strong>[TOKEN]</strong> dynamically.
+                                You can also use date placeholder macros like <strong>[MONTH_START_DATE_URL]</strong>,
+                                <strong>[MONTH_END_DATE_URL]</strong>, or <strong>[TODAY_DATE_URL]</strong>.
+                            </p>
+                            <textarea id="calendar_api_curl_template" name="calendar_api_curl_template" rows="4"
+                                class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm block w-full">{{ old('calendar_api_curl_template', $platform->calendar_api_curl_template) }}</textarea>
+                            <x-input-error :messages="$errors->get('calendar_api_curl_template')" class="mt-2" />
+                        </div>
+
                         <div class="flex items-center justify-end mt-4">
                             <a href="{{ route('admin.platforms.index') }}"
                                 class="text-gray-500 hover:text-gray-700 mr-4">Cancel</a>
