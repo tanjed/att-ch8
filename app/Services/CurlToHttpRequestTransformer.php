@@ -10,9 +10,8 @@ class CurlToHttpRequestTransformer
     private string $url = '';
     private string $method = 'GET';
     private array $headers = [];
-    private array $data = [];
-    private bool $isJson = false;
-    private bool $isForm = false;
+    private string $rawBody = '';
+    private ?string $contentType = null;
 
     /**
      * Parse a curl command and execute it using Laravel HTTP client.
@@ -38,23 +37,19 @@ class CurlToHttpRequestTransformer
         $this->url = '';
         $this->method = 'GET';
         $this->headers = [];
-        $this->data = [];
-        $this->isJson = false;
-        $this->isForm = false;
+        $this->rawBody = '';
+        $this->contentType = null;
 
-        // Clean up the command
-        $curlCommand = trim(preg_replace('/\s+/', ' ', $curlCommand));
-        $curlCommand = str_replace(["\\\r\n", "\\\n", "\\\r", "\\\t"], ' ', $curlCommand);
+        // Normalize line endings and whitespace for parsing
+        $curlCommand = str_replace(["\r\n", "\r", "\n"], ' ', $curlCommand);
 
         // Remove 'curl' prefix
         $curlCommand = preg_replace('/^curl\s+/i', '', $curlCommand);
 
-        // Parse URL
-        if (preg_match('/^["\']?(https?:\/\/[^\s\'"]+)["\']?/', $curlCommand, $matches)) {
+        // Parse URL - look for quoted or unquoted URL at start or after options
+        if (preg_match('/^["\']([^"\']+)["\']/', $curlCommand, $matches)) {
             $this->url = $matches[1];
-        } elseif (preg_match('/--location\s+["\']?([^\s\'"]+)["\']?/', $curlCommand, $matches)) {
-            $this->url = $matches[1];
-        } elseif (preg_match('/(?:^|\s)(https?:\/\/[^\s]+)/', $curlCommand, $matches)) {
+        } elseif (preg_match('/^([^\s]+)/', $curlCommand, $matches)) {
             $this->url = $matches[1];
         }
 
@@ -65,9 +60,13 @@ class CurlToHttpRequestTransformer
             $this->method = strtoupper($matches[1]);
         }
 
-        // Parse headers
-        preg_match_all('/-H\s+["\']([^"\']+)["\']/', $curlCommand, $headerMatches);
-        foreach ($headerMatches[1] as $header) {
+        // Parse headers - handle both single and double quotes
+        preg_match_all('/-H\s+\'([^\']+)\'/', $curlCommand, $headerMatchesSingle);
+        preg_match_all('/-H\s+"([^"]+)"/', $curlCommand, $headerMatchesDouble);
+
+        $allHeaders = array_merge($headerMatchesSingle[1], $headerMatchesDouble[1]);
+
+        foreach ($allHeaders as $header) {
             $parts = explode(':', $header, 2);
             if (count($parts) === 2) {
                 $key = trim($parts[0]);
@@ -76,67 +75,39 @@ class CurlToHttpRequestTransformer
 
                 // Detect content type
                 if (strtolower($key) === 'content-type') {
-                    if (str_contains(strtolower($value), 'application/json')) {
-                        $this->isJson = true;
-                    } elseif (str_contains(strtolower($value), 'x-www-form-urlencoded')) {
-                        $this->isForm = true;
-                    }
+                    $this->contentType = $value;
                 }
             }
         }
 
-        // Parse data
-        // Try --data-raw first (common in Postman exports)
-        if (preg_match('/--data-raw\s+["\'](.+?)["\'](?=\s+-|\s*$)/s', $curlCommand, $matches)) {
-            $this->parseData($matches[1]);
-        }
-        // Try --data
-        elseif (preg_match('/--data\s+["\'](.+?)["\'](?=\s+-|\s*$)/s', $curlCommand, $matches)) {
-            $this->parseData($matches[1]);
-        }
-        // Try -d
-        elseif (preg_match('/-d\s+["\'](.+?)["\'](?=\s+-|\s*$)/s', $curlCommand, $matches)) {
-            $this->parseData($matches[1]);
-        }
-        // Try --data-binary
-        elseif (preg_match('/--data-binary\s+["\'](.+?)["\'](?=\s+-|\s*$)/s', $curlCommand, $matches)) {
-            $this->parseData($matches[1]);
+        // Parse data - try different flags
+        $dataPatterns = [
+            '/--data-raw\s+\'([^\']+)\'/s',
+            '/--data-raw\s+"([^"]+)"/s',
+            '/--data\s+\'([^\']+)\'/s',
+            '/--data\s+"([^"]+)"/s',
+            '/-d\s+\'([^\']+)\'/s',
+            '/-d\s+"([^"]+)"/s',
+            '/--data-binary\s+\'([^\']+)\'/s',
+            '/--data-binary\s+"([^"]+)"/s',
+        ];
+
+        foreach ($dataPatterns as $pattern) {
+            if (preg_match($pattern, $curlCommand, $matches)) {
+                $this->rawBody = $matches[1];
+                break;
+            }
         }
 
-        // If no Content-Type header was found but we have JSON data, assume JSON
-        if (!empty($this->data) && !$this->isForm && !$this->isJson) {
-            $this->isJson = true;
-        }
-    }
-
-    /**
-     * Parse data payload.
-     *
-     * @param string $data
-     * @return void
-     */
-    private function parseData(string $data): void
-    {
-        $data = trim($data);
-
-        // Try to decode as JSON first
-        $decoded = json_decode($data, true);
-        if (json_last_error() === JSON_ERROR_NONE) {
-            $this->data = $decoded;
-            $this->isJson = true;
-            return;
+        // If data is present but no method was specified, default to POST
+        if (!empty($this->rawBody) && $this->method === 'GET') {
+            $this->method = 'POST';
         }
 
-        // Try to parse as form-urlencoded
-        parse_str($data, $parsed);
-        if (!empty($parsed)) {
-            $this->data = $parsed;
-            $this->isForm = true;
-            return;
+        // Convert literal \r\n to actual CRLF for multipart data
+        if (str_contains($this->rawBody, '\\r\\n')) {
+            $this->rawBody = str_replace('\\r\\n', "\r\n", $this->rawBody);
         }
-
-        // Store as raw data
-        $this->data = ['raw' => $data];
     }
 
     /**
@@ -146,49 +117,35 @@ class CurlToHttpRequestTransformer
      */
     public function makeRequest(): Response
     {
-        $http = Http::withHeaders($this->headers);
-
         $method = strtolower($this->method);
         $url = $this->url;
 
-        // Remove Content-Type from headers as Laravel handles it
-        $headersWithoutContentType = array_filter(
-            $this->headers,
-            fn($key) => strtolower($key) !== 'content-type',
-            ARRAY_FILTER_USE_KEY
-        );
-        $http = Http::withHeaders($headersWithoutContentType);
+        // Build HTTP client with headers (excluding Content-Type which we handle separately)
+        $headersToSend = $this->headers;
+        unset($headersToSend['Content-Type'], $headersToSend['content-type']);
 
-        if ($this->isJson && !empty($this->data)) {
-            $http = Http::withHeaders($this->headers);
-            unset($headersWithoutContentType['Content-Type'], $headersWithoutContentType['content-type']);
-            $http = Http::withHeaders($headersWithoutContentType);
-            return $http->withBody(json_encode($this->data), 'application/json')->send($method, $url);
+        $http = Http::withHeaders($headersToSend);
+
+        // If we have a raw body, send it with the appropriate content type
+        if (!empty($this->rawBody)) {
+            $contentType = $this->contentType ?? 'application/octet-stream';
+            return $http->withBody($this->rawBody, $contentType)->send($method, $url);
         }
 
-        if ($this->isForm && !empty($this->data)) {
-            return match ($method) {
-                'post' => $http->asForm()->post($url, $this->data),
-                'put' => $http->asForm()->put($url, $this->data),
-                'patch' => $http->asForm()->patch($url, $this->data),
-                default => $http->asForm()->send($method, $url, ['form_params' => $this->data]),
-            };
-        }
-
+        // No body - simple request
         return match ($method) {
-            'get' => $http->get($url, $this->data),
-            'post' => $http->post($url, $this->data),
-            'put' => $http->put($url, $this->data),
-            'patch' => $http->patch($url, $this->data),
-            'delete' => $http->delete($url, $this->data),
+            'get' => $http->get($url),
+            'post' => $http->post($url),
+            'put' => $http->put($url),
+            'patch' => $http->patch($url),
+            'delete' => $http->delete($url),
+            'head' => $http->head($url),
             default => $http->send($method, $url),
         };
     }
 
     /**
      * Get parsed URL.
-     *
-     * @return string
      */
     public function getUrl(): string
     {
@@ -197,8 +154,6 @@ class CurlToHttpRequestTransformer
 
     /**
      * Get parsed method.
-     *
-     * @return string
      */
     public function getMethod(): string
     {
@@ -207,8 +162,6 @@ class CurlToHttpRequestTransformer
 
     /**
      * Get parsed headers.
-     *
-     * @return array
      */
     public function getHeaders(): array
     {
@@ -216,12 +169,10 @@ class CurlToHttpRequestTransformer
     }
 
     /**
-     * Get parsed data.
-     *
-     * @return array
+     * Get raw body.
      */
-    public function getData(): array
+    public function getRawBody(): string
     {
-        return $this->data;
+        return $this->rawBody;
     }
 }
