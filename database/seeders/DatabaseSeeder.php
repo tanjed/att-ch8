@@ -15,11 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Super Admin',
-            'email' => 'admin@autoattend.local',
-            'password' => bcrypt('password'), // simple default password
-            'role' => 'super_admin',
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@autoattend.local'],
+            [
+                'name' => 'Super Admin',
+                'password' => bcrypt('password'), // simple default password
+                'role' => 'super_admin',
+            ]
+        );
     }
 }

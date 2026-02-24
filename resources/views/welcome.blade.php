@@ -148,7 +148,7 @@
 
     <!-- Footer -->
     <footer class="relative z-10 py-8 border-t border-slate-200/50 dark:border-slate-800/50 mt-auto backdrop-blur-lg bg-white/50 dark:bg-slate-900/50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-center items-center gap-4">
             <span class="text-sm font-medium text-slate-500 dark:text-slate-400">
                 &copy; {{ date('Y') }} Att-Ch8 Platform. All rights reserved.
             </span>
