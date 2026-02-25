@@ -135,6 +135,7 @@ class CurlToHttpRequestTransformer
         }
 
         Log::debug("Curl Request: [{$this->method}] {$this->url}");
+        Log::debug("Curl Headers: ", $this->headers);
     }
 
     /**

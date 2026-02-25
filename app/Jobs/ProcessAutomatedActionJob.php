@@ -76,7 +76,8 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     $needsNewToken = true;
                     Cache::forget($tokenCacheKey); // Bust the cache on auth failure
                 } else {
-                    $this->logAction($setting, 'success', json_encode($response['body']));
+                    $status = ($response['status'] >= 200 && $response['status'] < 300) ? 'success' : 'failed';
+                    $this->logAction($setting, $status, json_encode($response['body']));
                     return;
                 }
             }
@@ -145,7 +146,8 @@ class ProcessAutomatedActionJob implements ShouldQueue
                 // Now execute the actual action with the fresh token
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
 
-                $this->logAction($setting, 'success', json_encode($response['body']));
+                $status = ($response['status'] >= 200 && $response['status'] < 300) ? 'success' : 'failed';
+                $this->logAction($setting, $status, json_encode($response['body']));
             }
 
         } catch (\Exception $e) {
@@ -174,9 +176,9 @@ class ProcessAutomatedActionJob implements ShouldQueue
         try {
             $curl = $platform->calendar_api_curl_template;
             $curl = str_replace('[TOKEN]', $token, $curl);
-            $curl = str_replace('[MONTH_START_DATE_URL]', now()->startOfMonth()->format('d%2Fm%2FY'), $curl);
-            $curl = str_replace('[MONTH_END_DATE_URL]', now()->endOfMonth()->format('d%2Fm%2FY'), $curl);
-            $curl = str_replace('[TODAY_DATE_URL]', now()->format('d%2Fm%2FY'), $curl);
+            $curl = str_replace('[MONTH_START_DATE_URL]', urlencode(now()->startOfMonth()->format('d/m/Y')), $curl);
+            $curl = str_replace('[MONTH_END_DATE_URL]', urlencode(now()->endOfMonth()->format('d/m/Y')), $curl);
+            $curl = str_replace('[TODAY_DATE_URL]', urlencode(now()->format('d/m/Y')), $curl);
 
             if (!str_contains($platform->calendar_api_curl_template, '[TOKEN]')) {
                 $curl .= " -H 'Authorization: Bearer {$token}'";
