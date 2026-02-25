@@ -65,89 +65,93 @@ class ProcessAutomatedActionJob implements ShouldQueue
             $token = Cache::get($tokenCacheKey, $credential->access_token);
             $needsNewToken = empty($token);
 
-            // If we have a token (cached or DB), try it first
-            if (!$needsNewToken) {
+            $maxAttempts = 3; // 1 initial try + up to 2 retries on 401/403
+
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                // If we need a new token (or previous one failed with 401/403)
+                if ($needsNewToken) {
+                    $tokenFetched = false;
+
+                    // Attempt to Refresh first if we have a refresh token and template
+                    if ($platform->refresh_curl_template && $credential->refresh_token) {
+                        $refreshCurl = $platform->refresh_curl_template;
+                        $refreshCurl = str_replace('[REFRESH_TOKEN]', $credential->refresh_token, $refreshCurl);
+
+                        $jsonResponse = $this->fetchAuthResponse($refreshCurl);
+
+                        if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
+                            $token = data_get($jsonResponse, $platform->auth_token_key);
+                            $credential->access_token = $token;
+                            if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
+                                $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
+                            }
+                            $credential->save();
+                            $tokenFetched = true;
+                        }
+                    }
+
+                    // If completely new or refresh failed, do a full Re-Login
+                    if (!$tokenFetched) {
+                        $authCurl = $platform->authentication_curl_template;
+
+                        if (!$authCurl) {
+                            $this->logAction($setting, 'failed', 'Platform missing auth curl template');
+                            return;
+                        }
+
+                        $authCurl = str_replace('[USERNAME]', $credential->username, $authCurl);
+                        $authCurl = str_replace('[PASSWORD]', $credential->password, $authCurl);
+
+                        $jsonResponse = $this->fetchAuthResponse($authCurl);
+
+                        if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
+                            $token = data_get($jsonResponse, $platform->auth_token_key);
+                            $credential->access_token = $token;
+                            if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
+                                $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
+                            }
+                            $credential->save();
+                        } else {
+                            if ($attempt >= $maxAttempts) {
+                                $this->logAction($setting, 'failed', 'Failed to extract auth token during login. Response: ' . json_encode($jsonResponse));
+                                return;
+                            }
+                            continue;
+                        }
+                    }
+
+                    // Cache the newly fetched token for 60 minutes
+                    Cache::put($tokenCacheKey, $token, now()->addMinutes(60));
+
+                    // Execute the intermediate related_auth_curl if defined on the platform
+                    if ($platform->related_auth_curl) {
+                        $this->fetchRelatedAuthUrl($token, $platform->related_auth_curl);
+                    }
+
+                    $needsNewToken = false;
+                }
+
                 if (!$this->evaluateCalendarApi($platform, $token, $credential, $setting)) {
                     return;
                 }
 
+                // Now execute the actual action with the token
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
+
                 if ($response['status'] == 401 || $response['status'] == 403) {
                     $needsNewToken = true;
                     Cache::forget($tokenCacheKey); // Bust the cache on auth failure
-                } else {
-                    $status = ($response['status'] >= 200 && $response['status'] < 300) ? 'success' : 'failed';
-                    $this->logAction($setting, $status, json_encode($response['body']));
-                    return;
-                }
-            }
 
-            // If we need a new token (or previous one failed with 401/403)
-            if ($needsNewToken) {
-                $tokenFetched = false;
-
-                // Attempt to Refresh first if we have a refresh token and template
-                if ($platform->refresh_curl_template && $credential->refresh_token) {
-                    $refreshCurl = $platform->refresh_curl_template;
-                    $refreshCurl = str_replace('[REFRESH_TOKEN]', $credential->refresh_token, $refreshCurl);
-
-                    $jsonResponse = $this->fetchAuthResponse($refreshCurl);
-
-                    if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
-                        $token = data_get($jsonResponse, $platform->auth_token_key);
-                        $credential->access_token = $token;
-                        if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
-                            $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
-                        }
-                        $credential->save();
-                        $tokenFetched = true;
-                    }
-                }
-
-                // If completely new or refresh failed, do a full Re-Login
-                if (!$tokenFetched) {
-                    $authCurl = $platform->authentication_curl_template;
-
-                    if (!$authCurl) {
-                        $this->logAction($setting, 'failed', 'Platform missing auth curl template');
+                    if ($attempt >= $maxAttempts) {
+                        $this->logAction($setting, 'failed', json_encode($response['body']));
                         return;
                     }
-
-                    $authCurl = str_replace('[USERNAME]', $credential->username, $authCurl);
-                    $authCurl = str_replace('[PASSWORD]', $credential->password, $authCurl);
-
-                    $jsonResponse = $this->fetchAuthResponse($authCurl);
-
-                    if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
-                        $token = data_get($jsonResponse, $platform->auth_token_key);
-                        $credential->access_token = $token;
-                        if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
-                            $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
-                        }
-                        $credential->save();
-                    } else {
-                        $this->logAction($setting, 'failed', 'Failed to extract auth token during login. Response: ' . json_encode($jsonResponse));
-                        return;
-                    }
+                    continue; // Loop again, fetch new token
                 }
-
-                // Cache the newly fetched token for 60 minutes
-                Cache::put($tokenCacheKey, $token, now()->addMinutes(60));
-
-                // Execute the intermediate related_auth_curl if defined on the platform
-                if ($platform->related_auth_curl) {
-                    $this->fetchRelatedAuthUrl($token, $platform->related_auth_curl);
-                }
-
-                if (!$this->evaluateCalendarApi($platform, $token, $credential, $setting)) {
-                    return;
-                }
-
-                // Now execute the actual action with the fresh token
-                $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
 
                 $status = ($response['status'] >= 200 && $response['status'] < 300) ? 'success' : 'failed';
                 $this->logAction($setting, $status, json_encode($response['body']));
+                return;
             }
 
         } catch (\Exception $e) {

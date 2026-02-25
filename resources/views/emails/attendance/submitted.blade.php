@@ -18,7 +18,7 @@
         <x-mail::panel>
             ### Execution Failed
             The server responded with the following output:
-            <br>
+
             {{ substr(is_string($response) ? $response : json_encode($response), 0, 500) }}
         </x-mail::panel>
     @endif
