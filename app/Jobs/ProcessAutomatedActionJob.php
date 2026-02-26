@@ -106,6 +106,10 @@ class ProcessAutomatedActionJob implements ShouldQueue
                         $calendarCurl .= " -H 'Authorization: Bearer {$token}'";
                     }
 
+                    Log::debug("---- AUTOMATED JOB: Calendar API cURL ----");
+                    Log::debug($calendarCurl);
+                    sleep(2); // Slow down the automated cron
+
                     try {
                         $transformer = new CurlToHttpRequestTransformer();
                         $calendarResponse = $transformer->execute($calendarCurl);
@@ -188,6 +192,10 @@ class ProcessAutomatedActionJob implements ShouldQueue
         if (!str_contains($curlTemplate, '[TOKEN]')) {
             $curl .= " -H 'Authorization: Bearer {$token}'";
         }
+
+        Log::debug("---- AUTOMATED JOB: Action Execution cURL ----");
+        Log::debug($curl);
+        sleep(2); // Slow down the automated cron
 
         try {
             $transformer = new CurlToHttpRequestTransformer();
