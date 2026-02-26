@@ -5,6 +5,9 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\UserPlatformCredential;
 use Illuminate\Http\Request;
+use App\Models\Platform;
+use App\Services\CredentialValidatorService;
+use Illuminate\Support\Facades\Cache;
 
 class CredentialController extends Controller
 {
@@ -30,7 +33,7 @@ class CredentialController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request, CredentialValidatorService $validator)
     {
         $validated = $request->validate([
             'platform_id' => [
@@ -45,9 +48,21 @@ class CredentialController extends Controller
             'location' => 'nullable|string|max:255',
         ]);
 
+        $platform = Platform::findOrFail($validated['platform_id']);
+
+        // Validate credentials before saving
+        $validationResult = $validator->validateAndFetchTokens($platform, $validated['username'], $validated['password'], $validated['location']);
+
+        if (!$validationResult['success']) {
+            return back()->withInput()->withErrors(['error' => 'Validation Failed: ' . $validationResult['error']]);
+        }
+
+        $validated['access_token'] = $validationResult['access_token'] ?? null;
+        $validated['refresh_token'] = $validationResult['refresh_token'] ?? null;
+
         auth()->user()->credentials()->create($validated);
 
-        return redirect()->route('user.credentials.index')->with('success', 'Platform credentials added successfully.');
+        return redirect()->route('user.credentials.index')->with('success', 'Platform credentials validated and added successfully.');
     }
 
     /**
@@ -71,7 +86,7 @@ class CredentialController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, UserPlatformCredential $credential)
+    public function update(Request $request, UserPlatformCredential $credential, CredentialValidatorService $validator)
     {
         $validated = $request->validate([
             'platform_id' => [
@@ -86,9 +101,24 @@ class CredentialController extends Controller
             'location' => 'nullable|string|max:255',
         ]);
 
+        $platform = Platform::findOrFail($validated['platform_id']);
+
+        // Validate credentials before saving
+        $validationResult = $validator->validateAndFetchTokens($platform, $validated['username'], $validated['password'], $validated['location']);
+
+        if (!$validationResult['success']) {
+            return back()->withInput()->withErrors(['error' => 'Validation Failed: ' . $validationResult['error']]);
+        }
+
+        $validated['access_token'] = $validationResult['access_token'] ?? null;
+        $validated['refresh_token'] = $validationResult['refresh_token'] ?? null;
+
         $credential->update($validated);
 
-        return redirect()->route('user.credentials.index')->with('success', 'Platform credentials updated successfully.');
+        // Clear cached token if present
+        Cache::forget("platform_token_{$credential->id}");
+
+        return redirect()->route('user.credentials.index')->with('success', 'Platform credentials validated and updated successfully.');
     }
 
     /**

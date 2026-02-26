@@ -70,69 +70,46 @@ class ProcessAutomatedActionJob implements ShouldQueue
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 // If we need a new token (or previous one failed with 401/403)
                 if ($needsNewToken) {
-                    $tokenFetched = false;
+                    $validator = new \App\Services\CredentialValidatorService();
+                    $validationResult = $validator->validateAndFetchTokens($platform, $credential->username, $credential->password, $credential->location);
 
-                    // Attempt to Refresh first if we have a refresh token and template
-                    if ($platform->refresh_curl_template && $credential->refresh_token) {
-                        $refreshCurl = $platform->refresh_curl_template;
-                        $refreshCurl = str_replace('[REFRESH_TOKEN]', $credential->refresh_token, $refreshCurl);
-
-                        $jsonResponse = $this->fetchAuthResponse($refreshCurl);
-
-                        if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
-                            $token = data_get($jsonResponse, $platform->auth_token_key);
-                            $credential->access_token = $token;
-                            if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
-                                $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
-                            }
-                            $credential->save();
-                            $tokenFetched = true;
-                        }
-                    }
-
-                    // If completely new or refresh failed, do a full Re-Login
-                    if (!$tokenFetched) {
-                        $authCurl = $platform->authentication_curl_template;
-
-                        if (!$authCurl) {
-                            $this->logAction($setting, 'failed', 'Platform missing auth curl template');
+                    if (!$validationResult['success']) {
+                        if ($attempt >= $maxAttempts) {
+                            $this->logAction($setting, 'failed', 'Failed to acquire valid tokens. ' . $validationResult['error']);
                             return;
                         }
-
-                        $authCurl = str_replace('[USERNAME]', $credential->username, $authCurl);
-                        $authCurl = str_replace('[PASSWORD]', $credential->password, $authCurl);
-
-                        $jsonResponse = $this->fetchAuthResponse($authCurl);
-
-                        if ($jsonResponse && data_get($jsonResponse, $platform->auth_token_key)) {
-                            $token = data_get($jsonResponse, $platform->auth_token_key);
-                            $credential->access_token = $token;
-                            if ($platform->refresh_token_key && data_get($jsonResponse, $platform->refresh_token_key)) {
-                                $credential->refresh_token = data_get($jsonResponse, $platform->refresh_token_key);
-                            }
-                            $credential->save();
-                        } else {
-                            if ($attempt >= $maxAttempts) {
-                                $this->logAction($setting, 'failed', 'Failed to extract auth token during login. Response: ' . json_encode($jsonResponse));
-                                return;
-                            }
-                            continue;
-                        }
+                        continue;
                     }
+
+                    $token = $validationResult['access_token'];
+
+                    // Save the new tokens back to the DB credential record
+                    $credential->access_token = $token;
+                    if (!empty($validationResult['refresh_token'])) {
+                        $credential->refresh_token = $validationResult['refresh_token'];
+                    }
+                    $credential->save();
 
                     // Cache the newly fetched token for 60 minutes
                     Cache::put($tokenCacheKey, $token, now()->addMinutes(60));
 
-                    // Execute the intermediate related_auth_curl if defined on the platform
-                    if ($platform->related_auth_curl) {
-                        $this->fetchRelatedAuthUrl($token, $platform->related_auth_curl);
-                    }
-
                     $needsNewToken = false;
                 }
 
-                if (!$this->evaluateCalendarApi($platform, $token, $credential, $setting)) {
-                    return;
+                $validator = new \App\Services\CredentialValidatorService();
+                $reflection = new \ReflectionClass($validator);
+                $evaluateMethod = $reflection->getMethod('testCalendarApi');
+                $evaluateMethod->setAccessible(true);
+
+                if ($platform->calendar_api_curl_template && !$evaluateMethod->invoke($validator, $platform->calendar_api_curl_template, $token, $credential->id)) {
+                    // Check if calendar failed explicitly due to off day vs normal network error
+                    $today = now()->format('Y-m-d');
+                    $cacheKey = "calendar_off_day_{$credential->id}_{$today}";
+                    if (Cache::get($cacheKey) === 'skipped') {
+                        $this->logAction($setting, 'skipped', 'Skipped due to Calendar API (Holiday/Leave/Weekend)');
+                        return;
+                    }
+                    // If network error, just proceed with normal action
                 }
 
                 // Now execute the actual action with the token
@@ -156,128 +133,6 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
         } catch (\Exception $e) {
             $this->logAction($setting, 'failed', $e->getMessage());
-        }
-    }
-
-    private function evaluateCalendarApi($platform, $token, $credential, $setting)
-    {
-        if (empty($platform->calendar_api_curl_template)) {
-            return true;
-        }
-
-        $today = now()->format('Y-m-d');
-        $cacheKey = "calendar_off_day_{$credential->id}_{$today}";
-
-        if (Cache::get($cacheKey) === 'skipped') {
-            $this->logAction($setting, 'skipped', 'Skipped due to Calendar API (Holiday/Leave/Weekend)');
-            return false;
-        }
-
-        if (Cache::get($cacheKey) === 'working') {
-            return true;
-        }
-
-        try {
-            $curl = $platform->calendar_api_curl_template;
-            $curl = str_replace('[TOKEN]', $token, $curl);
-            $curl = str_replace('[MONTH_START_DATE_URL]', urlencode(now()->startOfMonth()->format('d/m/Y')), $curl);
-            $curl = str_replace('[MONTH_END_DATE_URL]', urlencode(now()->endOfMonth()->format('d/m/Y')), $curl);
-            $curl = str_replace('[TODAY_DATE_URL]', urlencode(now()->format('d/m/Y')), $curl);
-
-            if (!str_contains($platform->calendar_api_curl_template, '[TOKEN]')) {
-                $curl .= " -H 'Authorization: Bearer {$token}'";
-            }
-
-            $transformer = new CurlToHttpRequestTransformer();
-            $response = $transformer->execute($curl);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                if (isset($data['calendar']) && isset($data['flags'])) {
-                    $todayFormatted = now()->format('d/m/Y');
-                    $todayColor = $data['calendar'][$todayFormatted] ?? null;
-
-                    if ($todayColor) {
-                        $flags = collect($data['flags']);
-                        $matchingFlag = $flags->firstWhere('color', $todayColor);
-
-                        if ($matchingFlag) {
-                            $flagCode = $matchingFlag['flag'] ?? '';
-                            // H: Holiday, L: Leave, W: Weekend, A: Absent
-                            if (in_array(strtoupper($flagCode), ['H', 'L', 'W', 'A'])) {
-                                Cache::put($cacheKey, 'skipped', now()->endOfDay());
-                                $this->logAction($setting, 'skipped', "Skipped due to Calendar API matching off-day flag: {$matchingFlag['flag_full_name']}");
-                                return false;
-                            }
-                        }
-                    }
-                }
-
-                Cache::put($cacheKey, 'working', now()->endOfDay());
-                return true;
-            }
-
-            if ($response->status() == 401 || $response->status() == 403) {
-                // Return true without caching so the main loop can bust the token cache and retry
-                return true;
-            }
-
-            Log::error('Calendar API failed', [
-                'status' => $response->status(),
-                'body' => $response->body()
-            ]);
-            // If the Calendar API is down, we default to running the action so users don't miss attendance
-            Cache::put($cacheKey, 'working', now()->endOfDay());
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('Calendar API exception', ['message' => $e->getMessage()]);
-            return true;
-        }
-    }
-
-    private function fetchAuthResponse($curlCommand)
-    {
-        try {
-            $transformer = new CurlToHttpRequestTransformer();
-            $response = $transformer->execute($curlCommand);
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-
-            Log::error('Auth request failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Auth request exception', ['message' => $e->getMessage()]);
-            return null;
-        }
-    }
-
-    private function fetchRelatedAuthUrl($token, $relatedAuthCurlTemplate)
-    {
-        try {
-            // Replace [TOKEN] dynamically if present in the template, otherwise append the header manually just in case
-            $curl = str_replace('[TOKEN]', $token, $relatedAuthCurlTemplate);
-
-            if (!str_contains($relatedAuthCurlTemplate, '[TOKEN]')) {
-                $curl .= " -H 'Authorization: Bearer {$token}'";
-            }
-
-            $transformer = new CurlToHttpRequestTransformer();
-            $response = $transformer->execute($curl);
-
-            if (!$response->successful()) {
-                Log::warning('Related auth URL failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Related auth URL exception', ['message' => $e->getMessage()]);
         }
     }
 

@@ -13,6 +13,15 @@
                     <form method="POST" action="{{ route('user.credentials.store') }}">
                         @csrf
 
+                        <!-- General API Validation Error Display -->
+                        @if ($errors->has('error'))
+                            <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+                                role="alert">
+                                <strong class="font-bold">Validation Error!</strong>
+                                <span class="block sm:inline">{{ $errors->first('error') }}</span>
+                            </div>
+                        @endif
+
                         <!-- Platform Selection -->
                         <div>
                             <x-input-label for="platform_id" :value="__('Select Platform')" />
