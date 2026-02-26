@@ -132,6 +132,9 @@
 
                                     var formData = new FormData(btn.closest('form'));
 
+                                    // Remove Laravel HTTP method spoofing if testing from an Edit form (PUT -> POST)
+                                    formData.delete('_method');
+
                                     fetch("{{ route('user.credentials.test') }}", {
                                         method: 'POST',
                                         headers: {
