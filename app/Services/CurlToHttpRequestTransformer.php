@@ -74,9 +74,9 @@ class CurlToHttpRequestTransformer
             $this->method = strtoupper($matches[1]);
         }
 
-        // Parse headers - handle both single and double quotes
-        preg_match_all('/-H\s+\'([^\']+)\'/', $curlCommand, $headerMatchesSingle);
-        preg_match_all('/-H\s+"([^"]+)"/', $curlCommand, $headerMatchesDouble);
+        // Parse headers - handle both single and double quotes for both -H and --header flags
+        preg_match_all('/(?:-H|--header)\s+\'([^\']+)\'/i', $curlCommand, $headerMatchesSingle);
+        preg_match_all('/(?:-H|--header)\s+"([^"]+)"/i', $curlCommand, $headerMatchesDouble);
 
         $allHeaders = array_merge($headerMatchesSingle[1], $headerMatchesDouble[1]);
 
