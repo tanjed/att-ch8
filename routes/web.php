@@ -43,8 +43,23 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
             $query->where('user_id', $request->user_id);
         }
 
+        if ($request->filled('platform_id')) {
+            $query->whereHas('platformAction', function ($q) use ($request) {
+                $q->where('platform_id', $request->platform_id);
+            });
+        }
+
+        if ($request->filled('action_id')) {
+            $query->where('platform_action_id', $request->action_id);
+        }
+
         $allActions = $query->orderBy('next_execution_time', 'asc')->get();
         $selectedUserId = $request->user_id;
+        $selectedPlatformId = $request->platform_id;
+        $selectedActionId = $request->action_id;
+
+        $platforms = \App\Models\Platform::orderBy('name')->get();
+        $actions = \App\Models\PlatformAction::with('platform')->orderBy('name')->get();
 
         // KPI Calculations
         $totalCredentials = \App\Models\UserPlatformCredential::count();
@@ -58,7 +73,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
         return view('admin.dashboard', compact(
             'allActions',
             'users',
+            'platforms',
+            'actions',
             'selectedUserId',
+            'selectedPlatformId',
+            'selectedActionId',
             'totalCredentials',
             'totalActions',
             'totalUsers',

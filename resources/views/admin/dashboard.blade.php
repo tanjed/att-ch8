@@ -30,7 +30,8 @@
                                 <h2 class="text-3xl font-bold text-gray-900 dark:text-white">{{ $totalUsers }}</h2>
                                 <p
                                     class="text-xs font-semibold text-green-600 mt-2 bg-green-50 inline-block px-2 py-1 rounded-md">
-                                    {{ $verifiedUsers }} Verified</p>
+                                    {{ $verifiedUsers }} Verified
+                                </p>
                             </div>
                         </div>
 
@@ -113,10 +114,33 @@
                         <h3 class="text-lg font-medium">{{ __('Overview: All User Actions') }}</h3>
 
                         <form method="GET" action="{{ route('admin.dashboard') }}"
-                            class="w-full sm:w-auto mt-4 sm:mt-0">
+                            class="w-full lg:w-auto mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
+
+                            <x-input-label for="platform_id" :value="__('Filter by Platform')" class="sr-only" />
+                            <select id="platform_id" name="platform_id" onchange="this.form.submit()"
+                                class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm block w-full sm:w-auto md:w-[150px] lg:w-[200px]">
+                                <option value="">-- All Platforms --</option>
+                                @foreach($platforms as $platform)
+                                    <option value="{{ $platform->id }}" {{ $selectedPlatformId == $platform->id ? 'selected' : '' }}>
+                                        {{ $platform->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            <x-input-label for="action_id" :value="__('Filter by Action')" class="sr-only" />
+                            <select id="action_id" name="action_id" onchange="this.form.submit()"
+                                class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm block w-full sm:w-auto md:w-[150px] lg:w-[200px]">
+                                <option value="">-- All Actions --</option>
+                                @foreach($actions as $action)
+                                    <option value="{{ $action->id }}" {{ $selectedActionId == $action->id ? 'selected' : '' }}>
+                                        {{ $action->platform->name }} - {{ $action->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+
                             <x-input-label for="user_id" :value="__('Filter by User')" class="sr-only" />
                             <select id="user_id" name="user_id" onchange="this.form.submit()"
-                                class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm block w-full sm:w-[300px]">
+                                class="border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm block w-full sm:w-auto md:w-[200px] lg:w-[250px]">
                                 <option value="">-- All Users --</option>
                                 @foreach($users as $user)
                                     <option value="{{ $user->id }}" {{ $selectedUserId == $user->id ? 'selected' : '' }}>
