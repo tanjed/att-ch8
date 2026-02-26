@@ -47,6 +47,7 @@ class CredentialValidatorService
 
             // 2. Fetch Related Auth URL (if defined)
             if ($platform->related_auth_curl) {
+                sleep(2); // Prevent rapid-fire rate limiting 401s
                 $relatedSuccess = $this->fetchRelatedAuthUrl($accessToken, $platform->related_auth_curl);
                 if (!$relatedSuccess) {
                     return ['success' => false, 'error' => 'Failed testing the related authentication URL.'];
@@ -55,6 +56,7 @@ class CredentialValidatorService
 
             // 3. Evaluate Calendar API (if defined)
             if ($platform->calendar_api_curl_template) {
+                sleep(2); // Prevent rapid-fire rate limiting 401s
                 $calendarSuccess = $this->testCalendarApi($platform->calendar_api_curl_template, $accessToken);
                 if (!$calendarSuccess) {
                     return ['success' => false, 'error' => 'Failed fetching data from the calendar API. Token might be invalid or lacking permissions.'];
