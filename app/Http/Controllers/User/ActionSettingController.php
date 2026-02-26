@@ -32,7 +32,22 @@ class ActionSettingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'platform_action_id' => 'required|exists:platform_actions,id',
+            'platform_action_id' => [
+                'required',
+                'exists:platform_actions,id',
+                function ($attribute, $value, $fail) {
+                    $platformAction = \App\Models\PlatformAction::find($value);
+                    if ($platformAction) {
+                        $hasCredential = auth()->user()->credentials()
+                            ->where('platform_id', $platformAction->platform_id)
+                            ->exists();
+
+                        if (!$hasCredential) {
+                            $fail('You must save credentials for this platform before adding an automated action.');
+                        }
+                    }
+                }
+            ],
             'target_time' => 'required|date_format:H:i',
             'buffer_minutes' => 'nullable|integer|min:0',
             'weekly_off_days' => 'nullable|array',
@@ -81,7 +96,22 @@ class ActionSettingController extends Controller
     public function update(Request $request, UserActionSetting $action)
     {
         $validated = $request->validate([
-            'platform_action_id' => 'required|exists:platform_actions,id',
+            'platform_action_id' => [
+                'required',
+                'exists:platform_actions,id',
+                function ($attribute, $value, $fail) {
+                    $platformAction = \App\Models\PlatformAction::find($value);
+                    if ($platformAction) {
+                        $hasCredential = auth()->user()->credentials()
+                            ->where('platform_id', $platformAction->platform_id)
+                            ->exists();
+
+                        if (!$hasCredential) {
+                            $fail('You must save credentials for this platform before updating an automated action.');
+                        }
+                    }
+                }
+            ],
             'target_time' => 'required|date_format:H:i',
             'buffer_minutes' => 'nullable|integer|min:0',
             'weekly_off_days' => 'nullable|array',

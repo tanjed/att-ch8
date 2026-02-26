@@ -21,6 +21,8 @@ class ProcessAutomatedActions extends Command
 
     public function handle()
     {
+        \Log::info("ProcessAutomatedActions Command Started Run at " . Carbon::now()->toDateTimeString());
+
         if ($actionId = $this->argument('action_id')) {
             $setting = UserActionSetting::find($actionId);
             if ($setting && $setting->is_active) {
@@ -43,6 +45,7 @@ class ProcessAutomatedActions extends Command
             ->get();
 
         if ($settings->isEmpty()) {
+            \Log::info("No automated actions matching current time ({$currentTime}) found.");
             return;
         }
 
