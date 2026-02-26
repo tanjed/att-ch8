@@ -128,7 +128,7 @@
                                     btn.innerText = 'Testing APIs...';
                                     btn.disabled = true;
 
-                                    var formData = new FormData(document.querySelector('form'));
+                                    var formData = new FormData(btn.closest('form'));
 
                                     fetch("{{ route('user.credentials.test') }}", {
                                         method: 'POST',
