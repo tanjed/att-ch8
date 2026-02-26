@@ -43,7 +43,7 @@ class AttendanceSubmitted extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.attendance.submitted',
+            view: 'emails.attendance.submitted',
         );
     }
 
