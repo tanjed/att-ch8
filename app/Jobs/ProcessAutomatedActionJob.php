@@ -72,7 +72,7 @@ class ProcessAutomatedActionJob implements ShouldQueue
                 if ($needsNewToken) {
                     $validator = new \App\Services\CredentialValidatorService();
                     $validationResult = $validator->validateAndFetchTokens($platform, $credential->username, $credential->password, $credential->location);
-                    
+
                     if (!$validationResult['success']) {
                         if ($attempt >= $maxAttempts) {
                             $this->logAction($setting, 'failed', 'Failed to acquire valid tokens. ' . $validationResult['error']);
@@ -82,7 +82,7 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     }
 
                     $token = $validationResult['access_token'];
-                    
+
                     // Save the new tokens back to the DB credential record
                     $credential->access_token = $token;
                     if (!empty($validationResult['refresh_token'])) {
@@ -174,6 +174,7 @@ class ProcessAutomatedActionJob implements ShouldQueue
     private function executeAction($curlTemplate, $token, $credential)
     {
         $curl = str_replace('[TOKEN]', $token, $curlTemplate);
+        $curl = str_replace('[UUID]', (string) \Illuminate\Support\Str::uuid(), $curl);
         if ($credential->location) {
             $parts = explode(',', $credential->location);
             if (count($parts) >= 2) {

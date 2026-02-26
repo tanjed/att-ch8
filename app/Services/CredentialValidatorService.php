@@ -31,6 +31,7 @@ class CredentialValidatorService
 
             $authCurl = str_replace('[USERNAME]', $username, $authCurl);
             $authCurl = str_replace('[PASSWORD]', $password, $authCurl);
+            $authCurl = str_replace('[UUID]', (string) \Illuminate\Support\Str::uuid(), $authCurl);
 
             $authResponse = $this->fetchAuthResponse($authCurl);
 
