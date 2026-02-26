@@ -59,11 +59,6 @@ class ProcessAutomatedActionJob implements ShouldQueue
             return;
         }
 
-        if (!$credential->is_active) {
-            $this->logAction($setting, 'failed', 'Platform credentials are inactive');
-            return;
-        }
-
         try {
             $maxAttempts = 3; // 1 initial try + up to 2 retries on 401/403
 
