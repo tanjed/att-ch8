@@ -123,10 +123,47 @@
                                         });
                                     }
                                 });
+
+                                document.getElementById('test-cred-btn').addEventListener('click', function () {
+                                    var btn = this;
+                                    var originalText = btn.innerText;
+                                    btn.innerText = 'Testing APIs...';
+                                    btn.disabled = true;
+
+                                    var formData = new FormData(document.querySelector('form'));
+
+                                    fetch("{{ route('user.credentials.test') }}", {
+                                        method: 'POST',
+                                        headers: {
+                                            'Accept': 'application/json'
+                                        },
+                                        body: formData
+                                    })
+                                        .then(res => res.json())
+                                        .then(data => {
+                                            if (data.success) {
+                                                alert('✅ SUCCESS: ' + data.message);
+                                            } else {
+                                                alert('❌ FAILED: ' + data.message);
+                                            }
+                                        })
+                                        .catch(err => {
+                                            alert('❌ Network Error: Could not reach the test endpoint.');
+                                        })
+                                        .finally(() => {
+                                            btn.innerText = originalText;
+                                            btn.disabled = false;
+                                        });
+                                });
+
                             });
                         </script>
 
                         <div class="flex items-center justify-end mt-4">
+                            <button type="button" id="test-cred-btn"
+                                class="inline-flex items-center px-4 py-2 bg-gray-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-500 active:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-800 transition ease-in-out duration-150 mr-4">
+                                {{ __('Test API Credentials') }}
+                            </button>
                             <a href="{{ route('user.credentials.index') }}"
                                 class="text-gray-500 hover:text-gray-700 mr-4">Cancel</a>
                             <x-primary-button>

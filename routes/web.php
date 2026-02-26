@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::prefix('user')->name('user.')->middleware('verified')->group(function () {
+        Route::post('credentials/test', [\App\Http\Controllers\User\CredentialController::class, 'test'])->name('credentials.test');
         Route::resource('credentials', \App\Http\Controllers\User\CredentialController::class);
         Route::resource('actions', \App\Http\Controllers\User\ActionSettingController::class);
     });

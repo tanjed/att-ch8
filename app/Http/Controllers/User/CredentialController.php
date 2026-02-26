@@ -129,4 +129,33 @@ class CredentialController extends Controller
         $credential->delete();
         return redirect()->route('user.credentials.index')->with('success', 'Platform credentials deleted successfully.');
     }
+
+    /**
+     * Test the credentials via AJAX without saving them.
+     */
+    public function test(Request $request, CredentialValidatorService $validator)
+    {
+        $validated = $request->validate([
+            'platform_id' => 'required|exists:platforms,id',
+            'username' => 'required|string|max:255',
+            'password' => 'required|string',
+            'location' => 'nullable|string|max:255',
+        ]);
+
+        $platform = Platform::findOrFail($validated['platform_id']);
+
+        $validationResult = $validator->validateAndFetchTokens($platform, $validated['username'], $validated['password'], $validated['location']);
+
+        if ($validationResult['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Credentials verified successfully! Both Auth and Calendar APIs connected.'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $validationResult['error']
+        ]);
+    }
 }
