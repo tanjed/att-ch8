@@ -33,6 +33,9 @@ class CredentialValidatorService
             $authCurl = str_replace('[PASSWORD]', $password, $authCurl);
             $authCurl = str_replace('[UUID]', (string) \Illuminate\Support\Str::uuid(), $authCurl);
 
+            Log::debug("---- TEST CREDENTIALS: Auth cURL ----");
+            Log::debug($authCurl);
+
             $authResponse = $this->fetchAuthResponse($authCurl);
 
             if (!$authResponse || !data_get($authResponse, $platform->auth_token_key)) {
@@ -100,6 +103,9 @@ class CredentialValidatorService
                 $curl .= " -H 'Authorization: Bearer {$token}'";
             }
 
+            Log::debug("---- TEST CREDENTIALS: Related Auth cURL ----");
+            Log::debug($curl);
+
             $transformer = new CurlToHttpRequestTransformer();
             $response = $transformer->execute($curl);
 
@@ -129,6 +135,9 @@ class CredentialValidatorService
             if (!str_contains($calendarCurlTemplate, '[TOKEN]')) {
                 $curl .= " -H 'Authorization: Bearer {$token}'";
             }
+
+            Log::debug("---- TEST CREDENTIALS: Calendar API cURL ----");
+            Log::debug($curl);
 
             $transformer = new CurlToHttpRequestTransformer();
             $response = $transformer->execute($curl);
