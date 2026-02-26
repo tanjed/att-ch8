@@ -60,19 +60,19 @@ class ProcessAutomatedActionJob implements ShouldQueue
         }
 
         try {
-            // Token Cache Key
-            $tokenCacheKey = "platform_token_{$credential->id}";
-            $token = Cache::get($tokenCacheKey, $credential->access_token);
-            $needsNewToken = empty($token);
-
             $maxAttempts = 3; // 1 initial try + up to 2 retries on 401/403
 
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-                // If we need a new token (or previous one failed with 401/403)
+                // Token Cache Key
+                $tokenCacheKey = "platform_token_{$credential->id}";
+                $token = Cache::get($tokenCacheKey, $credential->access_token);
+                $needsNewToken = empty($token);
+
+                // 1. Fetch new token if needed
                 if ($needsNewToken) {
                     $validator = new \App\Services\CredentialValidatorService();
                     $validationResult = $validator->validateAndFetchTokens($platform, $credential->username, $credential->password, $credential->location);
-
+                    
                     if (!$validationResult['success']) {
                         if ($attempt >= $maxAttempts) {
                             $this->logAction($setting, 'failed', 'Failed to acquire valid tokens. ' . $validationResult['error']);
@@ -82,7 +82,7 @@ class ProcessAutomatedActionJob implements ShouldQueue
                     }
 
                     $token = $validationResult['access_token'];
-
+                    
                     // Save the new tokens back to the DB credential record
                     $credential->access_token = $token;
                     if (!empty($validationResult['refresh_token'])) {
@@ -92,32 +92,67 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
                     // Cache the newly fetched token for 60 minutes
                     Cache::put($tokenCacheKey, $token, now()->addMinutes(60));
-
-                    $needsNewToken = false;
                 }
 
-                $validator = new \App\Services\CredentialValidatorService();
-                $reflection = new \ReflectionClass($validator);
-                $evaluateMethod = $reflection->getMethod('testCalendarApi');
-                $evaluateMethod->setAccessible(true);
+                // 2. Evaluate Calendar API
+                if ($platform->calendar_api_curl_template) {
+                    $calendarCurl = $platform->calendar_api_curl_template;
+                    $calendarCurl = str_replace('[TOKEN]', $token, $calendarCurl);
+                    $calendarCurl = str_replace('[MONTH_START_DATE_URL]', urlencode(now()->startOfMonth()->format('d/m/Y')), $calendarCurl);
+                    $calendarCurl = str_replace('[MONTH_END_DATE_URL]', urlencode(now()->endOfMonth()->format('d/m/Y')), $calendarCurl);
+                    $calendarCurl = str_replace('[TODAY_DATE_URL]', urlencode(now()->format('d/m/Y')), $calendarCurl);
 
-                if ($platform->calendar_api_curl_template && !$evaluateMethod->invoke($validator, $platform->calendar_api_curl_template, $token, $credential->id)) {
-                    // Check if calendar failed explicitly due to off day vs normal network error
-                    $today = now()->format('Y-m-d');
-                    $cacheKey = "calendar_off_day_{$credential->id}_{$today}";
-                    if (Cache::get($cacheKey) === 'skipped') {
-                        $this->logAction($setting, 'skipped', 'Skipped due to Calendar API (Holiday/Leave/Weekend)');
-                        return;
+                    if (!str_contains($platform->calendar_api_curl_template, '[TOKEN]')) {
+                        $calendarCurl .= " -H 'Authorization: Bearer {$token}'";
                     }
-                    // If network error, just proceed with normal action
+
+                    try {
+                        $transformer = new CurlToHttpRequestTransformer();
+                        $calendarResponse = $transformer->execute($calendarCurl);
+
+                        if ($calendarResponse->status() == 401 || $calendarResponse->status() == 403) {
+                            Cache::forget($tokenCacheKey);
+                            $credential->access_token = null;
+                            if ($attempt >= $maxAttempts) {
+                                $this->logAction($setting, 'failed', 'Calendar API Auth Failed: ' . json_encode($calendarResponse->json() ?? $calendarResponse->body()));
+                                return;
+                            }
+                            continue; // Retry with new token
+                        }
+
+                        if ($calendarResponse->successful()) {
+                            $data = $calendarResponse->json();
+                            if (isset($data['calendar']) && isset($data['flags'])) {
+                                $todayFormatted = now()->format('d/m/Y');
+                                $todayColor = $data['calendar'][$todayFormatted] ?? null;
+
+                                if ($todayColor) {
+                                    $flags = collect($data['flags']);
+                                    $matchingFlag = $flags->firstWhere('color', $todayColor);
+
+                                    if ($matchingFlag) {
+                                        $flagCode = $matchingFlag['flag'] ?? '';
+                                        // H: Holiday, L: Leave, W: Weekend, A: Absent
+                                        if (in_array(strtoupper($flagCode), ['H', 'L', 'W', 'A'])) {
+                                            $this->logAction($setting, 'skipped', "Skipped due to Calendar API matching off-day flag: {$matchingFlag['flag_full_name']}");
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Calendar API exception in Job', ['message' => $e->getMessage()]);
+                        // If network error, we just proceed with normal action
+                    }
                 }
 
-                // Now execute the actual action with the token
+                // 3. Execute the actual action
                 $response = $this->executeAction($setting->platformAction->api_curl_template, $token, $credential);
 
                 if ($response['status'] == 401 || $response['status'] == 403) {
-                    $needsNewToken = true;
                     Cache::forget($tokenCacheKey); // Bust the cache on auth failure
+                    $credential->access_token = null;
 
                     if ($attempt >= $maxAttempts) {
                         $this->logAction($setting, 'failed', json_encode($response['body']));
