@@ -136,8 +136,8 @@ class ProcessAutomatedActionJob implements ShouldQueue
 
                                     if ($matchingFlag) {
                                         $flagCode = $matchingFlag['flag'] ?? '';
-                                        // H: Holiday, L: Leave, W: Weekend, A: Absent
-                                        if (in_array(strtoupper($flagCode), ['H', 'L', 'W', 'A'])) {
+                                        // H: Holiday, L: Leave, W: Weekend
+                                        if (in_array(strtoupper($flagCode), ['H', 'L', 'W'])) {
                                             $this->logAction($setting, 'skipped', "Skipped due to Calendar API matching off-day flag: {$matchingFlag['flag_full_name']}");
                                             return;
                                         }
